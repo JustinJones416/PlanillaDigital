@@ -447,6 +447,20 @@
     border-top:1px solid var(--line);padding-top:10px}
   @media(max-width:760px){.user-info{display:none}.rol-cards{grid-template-columns:1fr}}
 
+  /* ===== PANTALLA DE ACCESO ===== */
+  .auth-screen{position:fixed;inset:0;background:
+      radial-gradient(1200px 600px at 100% -5%, rgba(46,117,182,.08), transparent 60%),
+      radial-gradient(900px 500px at -5% 105%, rgba(191,143,0,.06), transparent 55%), var(--bg);
+    display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+  .auth-card{background:var(--white);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    padding:34px 32px;width:100%;max-width:400px}
+  .auth-tabs{display:flex;gap:4px;background:var(--pale);border-radius:10px;padding:4px;margin-bottom:22px}
+  .auth-tab{flex:1;padding:9px;border:none;background:none;border-radius:8px;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:600;color:var(--gray);transition:.15s}
+  .auth-tab.active{background:var(--white);color:var(--navy);box-shadow:0 1px 3px rgba(16,42,80,.12)}
+  .auth-form .field{margin-bottom:14px}
+  .auth-error{font-size:12.5px;color:var(--red);min-height:16px;margin-bottom:6px}
+
   /* ===== IMPRESIÓN / PDF ===== */
   @media print{
     @page{margin:14mm}
@@ -462,8 +476,39 @@
 <body>
 <a href="#content" class="skip-link">Saltar al contenido principal</a>
 <div id="liveRegion" aria-live="polite" class="sr-only"></div>
+
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="brand" style="justify-content:center;margin-bottom:22px">
+      <div class="brand-logo">P</div>
+      <div class="brand-name">Planilla<span>Digital</span></div>
+    </div>
+    <div id="authTabs" class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="mostrarAuthTab('login')">Iniciar sesión</button>
+      <button class="auth-tab" id="tabRegistro" onclick="mostrarAuthTab('registro')">Crear cuenta</button>
+    </div>
+
+    <form id="formLogin" class="auth-form" onsubmit="return iniciarSesion(event)">
+      <div class="field"><label for="loginCorreo">Correo</label><input id="loginCorreo" type="email" required autocomplete="username"></div>
+      <div class="field"><label for="loginClave">Contraseña</label><input id="loginClave" type="password" required autocomplete="current-password"></div>
+      <div id="loginError" class="auth-error" role="alert" aria-live="polite"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="btnLogin">Iniciar sesión</button>
+    </form>
+
+    <form id="formRegistro" class="auth-form" style="display:none" onsubmit="return registrarse(event)">
+      <p class="mini" style="margin-bottom:14px;color:var(--gray)">La primera persona en registrarse queda como Administrador. Cualquier otra cuenta debe ser creada después por un administrador desde Usuarios y roles.</p>
+      <div class="field"><label for="regNombre">Nombre completo</label><input id="regNombre" required></div>
+      <div class="field"><label for="regCorreo">Correo</label><input id="regCorreo" type="email" required autocomplete="username"></div>
+      <div class="field"><label for="regClave">Contraseña</label><input id="regClave" type="password" required minlength="6" autocomplete="new-password"></div>
+      <div id="regError" class="auth-error" role="alert" aria-live="polite"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="btnRegistro">Crear cuenta</button>
+    </form>
+    <p class="mini" style="text-align:center;margin-top:16px;color:var(--gray)" id="authSub">Acceso protegido · los datos viven en tu base de Supabase</p>
+  </div>
+</div>
+
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="cerrarMenu()" aria-hidden="true"></div>
-<div class="app">
+<div class="app" id="appRoot" style="display:none">
   <aside class="sidebar" id="sidebar" aria-label="Barra lateral de navegación">
     <div class="brand">
       <div class="brand-logo">P</div>
@@ -784,8 +829,11 @@ async function verificarConexionNube(){
 function reiniciarDatos(){
   if(!confirm("Esto borrará todos los datos guardados (incluida la nube) y restaurará el ejemplo inicial. ¿Continuar?")) return;
   if(dbDisponible) localStorage.removeItem(DB_KEY);
-  if(supa) supa.from("app_state").delete().eq("id",EMPRESA_ID).then(()=>location.reload());
-  else location.reload();
+  if(supa){
+    const tablas=["solicitudes_vacaciones","amonestaciones","bajas","liquidaciones","historial_periodos","empleados","usuarios","empresas"];
+    Promise.all(tablas.map(t=>supa.from(t).delete().eq(t==="empresas"?"id":"empresa_id", t==="empresas"?EMPRESA_DB_ID:EMPRESA_DB_ID)))
+      .then(()=>location.reload()).catch(()=>location.reload());
+  } else location.reload();
 }
 
 
@@ -808,6 +856,102 @@ function cargarTema(){
   aplicarTema(t);
 }
 
+/* ============ AUTENTICACIÓN (Supabase Auth) ============ */
+let sesionActual = null; // {id, email} del usuario autenticado en Supabase Auth
+
+function mostrarAuthTab(tab){
+  document.getElementById("tabLogin").classList.toggle("active", tab==="login");
+  document.getElementById("tabRegistro").classList.toggle("active", tab==="registro");
+  document.getElementById("formLogin").style.display = tab==="login"?"block":"none";
+  document.getElementById("formRegistro").style.display = tab==="registro"?"block":"none";
+}
+
+async function iniciarSesion(ev){
+  ev.preventDefault();
+  const errBox=document.getElementById("loginError"); errBox.textContent="";
+  if(!supa){ errBox.textContent="No hay conexión con el servidor. Verifica tu internet."; return false; }
+  const correo=document.getElementById("loginCorreo").value.trim();
+  const clave=document.getElementById("loginClave").value;
+  const btn=document.getElementById("btnLogin"); btn.disabled=true; btn.textContent="Entrando…";
+  try{
+    const {data,error} = await supa.auth.signInWithPassword({email:correo, password:clave});
+    if(error){ errBox.textContent="Correo o contraseña incorrectos."; btn.disabled=false; btn.textContent="Iniciar sesión"; return false; }
+    await onSesionIniciada(data.user);
+  }catch(e){ errBox.textContent="No se pudo conectar. Intenta de nuevo."; }
+  btn.disabled=false; btn.textContent="Iniciar sesión";
+  return false;
+}
+
+async function registrarse(ev){
+  ev.preventDefault();
+  const errBox=document.getElementById("regError"); errBox.textContent="";
+  if(!supa){ errBox.textContent="No hay conexión con el servidor. Verifica tu internet."; return false; }
+  const nombre=document.getElementById("regNombre").value.trim();
+  const correo=document.getElementById("regCorreo").value.trim();
+  const clave=document.getElementById("regClave").value;
+  const btn=document.getElementById("btnRegistro"); btn.disabled=true; btn.textContent="Creando cuenta…";
+  try{
+    const {data,error} = await supa.auth.signUp({email:correo, password:clave});
+    if(error){ errBox.textContent=error.message.includes("already")?"Ese correo ya tiene una cuenta. Inicia sesión.":"No se pudo crear la cuenta: "+error.message; btn.disabled=false; btn.textContent="Crear cuenta"; return false; }
+    if(!data.user){ errBox.textContent="Revisa tu correo para confirmar la cuenta antes de entrar."; btn.disabled=false; btn.textContent="Crear cuenta"; return false; }
+    // ¿Ya existe un perfil con este correo (por ejemplo, precargado antes de tener cuenta de acceso)?
+    const {data:existente} = await supa.from("usuarios").select("id").eq("empresa_id",EMPRESA_DB_ID).ilike("correo",correo).maybeSingle();
+    if(!existente){
+      // ¿Es la primera persona del sistema? Si no hay ningún usuario aún, esta cuenta queda como Administrador.
+      const {count} = await supa.from("usuarios").select("*",{count:"exact",head:true}).eq("empresa_id",EMPRESA_DB_ID);
+      const rol = (!count || count===0) ? "admin" : "colaborador";
+      await supa.from("usuarios").insert({ id:Date.now()%2147483647, empresa_id:EMPRESA_DB_ID, nombre, correo,
+        contrasena_hash:"gestionada-por-supabase-auth", rol, activo:true });
+    }
+    await onSesionIniciada(data.user);
+  }catch(e){ errBox.textContent="No se pudo crear la cuenta. Intenta de nuevo."; }
+  btn.disabled=false; btn.textContent="Crear cuenta";
+  return false;
+}
+
+async function onSesionIniciada(user){
+  sesionActual = {id:user.id, email:user.email};
+  document.getElementById("authScreen").style.display="none";
+  document.getElementById("appRoot").style.display="";
+  await cargar();
+  const yo = usuarios.find(u=>u.correo && u.correo.toLowerCase()===user.email.toLowerCase());
+  if(!yo){
+    // Tiene cuenta de acceso pero ningún administrador le asignó un perfil todavía.
+    await cerrarSesion();
+    const errBox=document.getElementById("loginError");
+    if(errBox) errBox.textContent="Tu cuenta no tiene un perfil asignado en el sistema. Pide a un administrador que te agregue en Usuarios y roles.";
+    return;
+  }
+  usuarioActivoId = yo.id;
+  cargarTema();
+  actualizarPeriodoUI();
+  actualizarUsuarioUI();
+  construirMenu();
+  document.getElementById("chipCo").textContent=empresa.nombre;
+  document.getElementById("content").innerHTML=V.dashboard();
+  anunciar(`Sesión iniciada como ${yo.nombre}, ${ROLES[yo.rol].nombre}`);
+}
+
+async function cerrarSesion(){
+  if(supa){ try{ await supa.auth.signOut(); }catch(e){} }
+  sesionActual = null;
+  document.getElementById("appRoot").style.display="none";
+  document.getElementById("authScreen").style.display="flex";
+  document.getElementById("loginCorreo").value="";
+  document.getElementById("loginClave").value="";
+  cerrarUserMenu();
+}
+
+// Al abrir la app, revisa si ya existe una sesión válida guardada por el navegador.
+async function revisarSesionExistente(){
+  if(!supa) return false;
+  try{
+    const {data} = await supa.auth.getSession();
+    if(data && data.session && data.session.user){ await onSesionIniciada(data.session.user); return true; }
+  }catch(e){}
+  return false;
+}
+
 /* ============ USUARIO ACTIVO Y MENÚ ============ */
 function actualizarUsuarioUI(){
   const u=usuarioActivo();
@@ -820,27 +964,19 @@ function toggleUserMenu(ev){
   if(ev) ev.stopPropagation();
   const dd=document.getElementById("userDropdown"), btn=document.getElementById("userBtn");
   if(dd.classList.contains("open")){ dd.classList.remove("open"); btn.setAttribute("aria-expanded","false"); return; }
-  const items=usuarios.map(u=>`<button class="ud-item ${u.id===usuarioActivoId?'active':''}" role="menuitem" onclick="cambiarUsuario(${u.id})">
-    <span class="ud-ava" style="background:${ROLES[u.rol].color}">${initials(u.nombre)}</span>
-    <span class="ud-info"><span class="ud-name">${u.nombre}</span><span class="ud-role">${ROLES[u.rol].nombre}</span></span>
-    ${u.id===usuarioActivoId?'<svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>':""}
-  </button>`).join("");
+  const u=usuarioActivo();
+  const yo=`<div class="ud-item active" style="cursor:default"><span class="ud-ava" style="background:${ROLES[u.rol].color}">${initials(u.nombre)}</span>
+    <span class="ud-info"><span class="ud-name">${u.nombre}</span><span class="ud-role">${ROLES[u.rol].nombre} · ${sesionActual?sesionActual.email:''}</span></span></div>`;
   const admin=rolActivo()==="admin"
-    ? `<div class="ud-sep"></div><button class="ud-manage" role="menuitem" onclick="cerrarUserMenu();switchView('usuarios')"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Gestionar usuarios</button>`
+    ? `<button class="ud-manage" role="menuitem" onclick="cerrarUserMenu();switchView('usuarios')"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Gestionar usuarios</button>`
     : "";
-  dd.innerHTML=`<div class="ud-title">Cambiar de usuario</div>${items}${admin}`;
+  const salir=`<button class="ud-manage" role="menuitem" onclick="cerrarUserMenu();cerrarSesion()" style="color:var(--red)"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Cerrar sesión</button>`;
+  dd.innerHTML=`<div class="ud-title">Tu cuenta</div>${yo}<div class="ud-sep"></div>${admin}${salir}`;
   dd.classList.add("open"); btn.setAttribute("aria-expanded","true");
 }
 function cerrarUserMenu(){
   const dd=document.getElementById("userDropdown"), btn=document.getElementById("userBtn");
   if(dd) dd.classList.remove("open"); if(btn) btn.setAttribute("aria-expanded","false");
-}
-function cambiarUsuario(id){
-  usuarioActivoId=id;
-  cerrarUserMenu(); actualizarUsuarioUI(); construirMenu(); guardar();
-  const u=usuarioActivo();
-  anunciar(`Sesión activa: ${u.nombre}, ${ROLES[u.rol].nombre}`);
-  switchView("dashboard");
 }
 document.addEventListener("click",()=>cerrarUserMenu());
 
@@ -1952,31 +2088,50 @@ function abrirUsuario(id){
   const u=id?usuarios.find(x=>x.id===id):{nombre:"",rol:"colaborador",correo:""};
   const nuevo=!id;
   const rolOpts=Object.entries(ROLES).map(([k,r])=>`<option value="${k}" ${u.rol===k?"selected":""}>${r.nombre} — ${r.desc}</option>`).join("");
+  const claveField = nuevo ? `<div class="field"><label for="usClave">Contraseña temporal</label><input id="usClave" type="password" minlength="6" placeholder="Mínimo 6 caracteres"></div>
+    <p class="mini" style="color:var(--gray);margin-bottom:4px">Compártela con la persona por un medio seguro; podrá cambiarla luego.</p>` : "";
   const cuerpo=`
     <div class="field"><label for="usNombre">Nombre completo</label><input id="usNombre" value="${u.nombre}" placeholder="Ej. Fabián Montenegro"></div>
-    <div class="field"><label for="usCorreo">Correo</label><input id="usCorreo" type="email" value="${u.correo||''}" placeholder="usuario@empresa.pa"></div>
+    <div class="field"><label for="usCorreo">Correo</label><input id="usCorreo" type="email" value="${u.correo||''}" placeholder="usuario@empresa.pa" ${nuevo?"":"disabled"}></div>
+    ${nuevo?"":`<p class="mini" style="color:var(--gray);margin-top:-8px;margin-bottom:12px">El correo de acceso no se puede cambiar aquí una vez creada la cuenta.</p>`}
+    ${claveField}
     <div class="field"><label for="usRol">Rol</label><select id="usRol">${rolOpts}</select></div>
+    <div id="usError" class="auth-error"></div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarUsuario(${id})">${nuevo?"Crear usuario":"Guardar cambios"}</button>
+      <button class="btn btn-primary" id="btnUsGuardar" onclick="guardarUsuario(${id})">${nuevo?"Crear usuario":"Guardar cambios"}</button>
     </div>`;
   document.getElementById("modalHost").innerHTML=modalShell(nuevo?"Nuevo usuario":"Editar usuario",cuerpo,520);
 }
-function guardarUsuario(id){
+async function guardarUsuario(id){
   const nombre=document.getElementById("usNombre").value.trim();
-  if(!nombre){ alert("El nombre no puede quedar vacío."); return; }
+  const errBox=document.getElementById("usError");
+  if(!nombre){ errBox.textContent="El nombre no puede quedar vacío."; return; }
   const rol=document.getElementById("usRol").value;
+  if(id){
+    const u=usuarios.find(x=>x.id===id); u.nombre=nombre; u.rol=rol;
+    if(id===usuarioActivoId){ actualizarUsuarioUI(); construirMenu(); }
+    guardar(); cerrarModal(); anunciar("Usuario actualizado"); switchView("usuarios");
+    return;
+  }
+  // Usuario nuevo: crea su cuenta real de acceso sin afectar la sesión del administrador.
   const correo=document.getElementById("usCorreo").value.trim();
-  if(id){ const u=usuarios.find(x=>x.id===id); u.nombre=nombre; u.rol=rol; u.correo=correo;
-    if(id===usuarioActivoId){ actualizarUsuarioUI(); construirMenu(); } }
-  else usuarios.push({id:nextUsuarioId++, nombre, rol, correo});
-  guardar(); cerrarModal(); anunciar("Usuario guardado"); switchView("usuarios");
+  const clave=document.getElementById("usClave").value;
+  if(!correo||clave.length<6){ errBox.textContent="Escribe un correo válido y una contraseña de al menos 6 caracteres."; return; }
+  const btn=document.getElementById("btnUsGuardar"); btn.disabled=true; btn.textContent="Creando…";
+  try{
+    const clienteTemporal = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const {data,error} = await clienteTemporal.auth.signUp({email:correo, password:clave});
+    if(error){ errBox.textContent="No se pudo crear el acceso: "+error.message; btn.disabled=false; btn.textContent="Crear usuario"; return; }
+    usuarios.push({id:nextUsuarioId++, nombre, rol, correo});
+    guardar(); cerrarModal(); anunciar("Usuario creado con su cuenta de acceso"); switchView("usuarios");
+  }catch(e){ errBox.textContent="No se pudo crear el usuario. Intenta de nuevo."; btn.disabled=false; btn.textContent="Crear usuario"; }
 }
 function eliminarUsuario(id){
   if(id===usuarioActivoId){ alert("No puede eliminar el usuario con la sesión activa."); return; }
   if(usuarios.length<=1){ alert("Debe existir al menos un usuario."); return; }
   const u=usuarios.find(x=>x.id===id);
-  if(!confirm(`¿Eliminar al usuario ${u.nombre}?`)) return;
+  if(!confirm(`¿Eliminar a ${u.nombre} de la lista de usuarios? Su cuenta de acceso deberá desactivarse por separado desde Supabase.`)) return;
   usuarios=usuarios.filter(x=>x.id!==id);
   guardar(); anunciar("Usuario eliminado"); switchView("usuarios");
 }
@@ -2328,13 +2483,9 @@ function actualizarPeriodoUI(){
 
 /* ============ INIT ============ */
 (async function iniciar(){
-  cargarTema(); // el tema no depende de la nube, se aplica de inmediato
-  await cargar();
-  actualizarPeriodoUI();
-  actualizarUsuarioUI();
-  construirMenu();
-  document.getElementById("chipCo").textContent=empresa.nombre;
-  document.getElementById("content").innerHTML=V.dashboard();
+  cargarTema(); // el tema se aplica de inmediato, incluso en la pantalla de acceso
+  const haySesion = await revisarSesionExistente();
+  // Si no hay sesión, la pantalla de acceso ya queda visible por defecto y esperamos al login.
 })();
 
 </script>
