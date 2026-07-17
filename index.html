@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlanillaDigital — Sistema de Gestión de Nómina y Cumplimiento</title>
+<style>
+  :root{
+    --navy:#1F4E79; --blue:#2E75B6; --lblue:#BDD7EE; --pale:#EAF1F8;
+    --gold:#BF8F00; --green:#2E7D32; --red:#C0504D; --gray:#5A6672;
+    --ink:#1A2230; --line:#E2E8F0; --bg:#EEF3F9; --white:#FFFFFF;
+    --shadow:0 1px 3px rgba(16,42,80,.08),0 4px 16px rgba(16,42,80,.06);
+    --font:"Inter","Segoe UI Variable","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-num:"SF Mono","Segoe UI",Consolas,"Inter",monospace;
+    /* gravedad de amonestaciones */
+    --sev-leve:#2E7D32; --sev-media:#BF8F00; --sev-grave:#C0504D;
+  }
+  /* ===== MODO OSCURO ===== */
+  [data-theme="dark"]{
+    --navy:#7EB0DE; --blue:#4A90D9; --lblue:#2C4A63; --pale:#1E2A38;
+    --gold:#E0A82E; --green:#5FBF6A; --red:#E06B67; --gray:#93A2B5;
+    --ink:#E6EDF5; --line:#2A3947; --bg:#0E141B; --white:#182430;
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.35);
+  }
+  [data-theme="dark"] body{
+    background:
+      radial-gradient(1200px 600px at 100% -5%, rgba(74,144,217,.10), transparent 60%),
+      radial-gradient(900px 500px at -5% 105%, rgba(224,168,46,.06), transparent 55%),
+      var(--bg);
+  }
+  /* La barra lateral mantiene un azul profundo propio en ambos modos */
+  [data-theme="dark"] .sidebar{background:#111C27}
+  [data-theme="dark"] .brand-logo{color:#111C27}
+  [data-theme="dark"] .brand-name{color:#EAF1F8}
+  [data-theme="dark"] .topbar,[data-theme="dark"] .card,[data-theme="dark"] .kpi,
+  [data-theme="dark"] .modal,[data-theme="dark"] .tl-card,[data-theme="dark"] .alert-item,
+  [data-theme="dark"] .feat-row,[data-theme="dark"] .law-card,[data-theme="dark"] .search-box{background:var(--white)}
+  [data-theme="dark"] th{background:#141F2B}
+  [data-theme="dark"] tbody tr:hover{background:var(--pale)}
+  [data-theme="dark"] .kpi .value,[data-theme="dark"] .topbar h1,
+  [data-theme="dark"] .card-h h3,[data-theme="dark"] .legend .amt{color:var(--navy)}
+  [data-theme="dark"] .slip,[data-theme="dark"] .acta{background:#182430;color:var(--ink)}
+  [data-theme="dark"] .slip-row{border-bottom-color:var(--line)}
+  [data-theme="dark"] .tag.ok{background:#1B3A2A;color:#7FD98A}
+  [data-theme="dark"] .tag.pend,[data-theme="dark"] .tag.warn{background:#3A3020;color:#E7C36B}
+  [data-theme="dark"] .tag.info{background:#1E3348;color:#7FB4E4}
+  [data-theme="dark"] .bars{background:linear-gradient(180deg,transparent 0,transparent calc(100% - 1px),var(--line) 100%),repeating-linear-gradient(180deg,transparent 0,transparent 46px,rgba(42,57,71,.5) 46px,rgba(42,57,71,.5) 47px)}
+  [data-theme="dark"] input,[data-theme="dark"] select,[data-theme="dark"] textarea{background:#111C27;color:var(--ink)}
+  [data-theme="dark"] .donut-wrap svg text{fill:var(--ink)!important}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);
+    background:
+      radial-gradient(1200px 600px at 100% -5%, rgba(46,117,182,.06), transparent 60%),
+      radial-gradient(900px 500px at -5% 105%, rgba(191,143,0,.05), transparent 55%),
+      var(--bg);
+    color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    letter-spacing:-.006em;font-feature-settings:"cv02","cv03","ss01";font-size:15px}
+  .app{display:flex;min-height:100vh}
+  .sidebar{width:242px;background:var(--navy);color:#DCE6F2;flex-shrink:0;
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  .brand{padding:20px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
+  .brand-logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--lblue));
+    display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--navy);font-size:18px;flex-shrink:0}
+  .brand-name{font-weight:700;font-size:16px;color:#fff}
+  .brand-name span{color:var(--lblue)}
+  .nav{padding:12px 12px;flex:1;overflow-y:auto}
+  .nav-label{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:#7B93B4;padding:12px 12px 6px}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;cursor:pointer;
+    font-size:13.5px;color:#C4D4E8;transition:.15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+  .nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+  .nav-item.active{background:var(--blue);color:#fff;font-weight:600}
+  .nav-item .ic{width:17px;height:17px;flex-shrink:0;opacity:.9}
+  .sidebar-foot{padding:14px 20px;border-top:1px solid rgba(255,255,255,.1);font-size:11.5px;color:#7B93B4}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{background:var(--white);border-bottom:1px solid var(--line);padding:14px 30px;
+    display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+  .topbar h1{font-size:19px;font-weight:700;color:var(--navy)}
+  .topbar .sub{font-size:12.5px;color:var(--gray);margin-top:2px}
+  .topbar-right{display:flex;align-items:center;gap:12px}
+  .theme-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--pale);
+    color:var(--navy);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+  .theme-btn:hover{background:var(--lblue)}
+  .theme-btn .moon{display:none}
+  [data-theme="dark"] .theme-btn .sun{display:none}
+  [data-theme="dark"] .theme-btn .moon{display:block}
+  .chip-co{background:var(--pale);border:1px solid var(--lblue);border-radius:8px;padding:6px 12px;
+    font-size:12.5px;color:var(--navy);font-weight:600;display:flex;align-items:center;gap:7px;max-width:230px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .period{background:var(--pale);border:1px solid var(--lblue);border-radius:8px;padding:6px 11px;
+    font-size:12.5px;color:var(--navy);font-weight:600;display:flex;align-items:center;gap:6px}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+  .content{padding:24px 30px;flex:1}
+  .view{display:none;animation:fade .3s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:15px;margin-bottom:22px}
+  .kpi{background:var(--white);border:1px solid var(--line);border-radius:13px;padding:17px 19px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--blue)}
+  .kpi.g::before{background:var(--green)} .kpi.gold::before{background:var(--gold)} .kpi.rd::before{background:var(--red)}
+  .kpi .label{font-size:12px;color:var(--gray);font-weight:500}
+  .kpi .value{font-size:25px;font-weight:800;color:var(--navy);margin-top:7px;letter-spacing:-.5px}
+  .kpi .meta{font-size:11.5px;color:var(--gray);margin-top:5px}
+  .row{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin-bottom:20px}
+  @media(max-width:1000px){.row{grid-template-columns:1fr}}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px}
+  .card-h{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .card-h h3{font-size:14.5px;font-weight:700;color:var(--navy)}
+  .card-h .hint{font-size:12px;color:var(--gray)}
+  .card-b{padding:20px}
+  .bars{display:flex;align-items:flex-end;gap:12px;height:190px;padding:14px 6px 4px;position:relative;
+    background:linear-gradient(180deg,transparent 0,transparent calc(100% - 1px),var(--line) 100%),
+      repeating-linear-gradient(180deg,transparent 0,transparent 46px,rgba(226,232,240,.6) 46px,rgba(226,232,240,.6) 47px);
+    border-radius:8px}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;position:relative;z-index:1}
+  .bar{width:100%;max-width:38px;background:linear-gradient(180deg,var(--blue),#5B9BD5);border-radius:6px 6px 0 0;
+    transition:height 1s cubic-bezier(.2,.8,.2,1);min-height:4px;cursor:default;box-shadow:0 1px 4px rgba(46,117,182,.25)}
+  .bar:hover{filter:brightness(1.08)}
+  .bar-val{font-size:11px;color:var(--navy);font-weight:700;font-family:var(--font-num)}
+  .bar-lbl{font-size:11px;color:var(--gray);font-weight:600}
+  .donut-wrap{display:flex;align-items:center;gap:26px;flex-wrap:wrap;justify-content:center}
+  .legend{list-style:none;font-size:13px;min-width:220px}
+  .legend li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .legend li:last-child{border-bottom:none}
+  .dot{width:12px;height:12px;border-radius:4px;flex-shrink:0}
+  .leg-label{display:flex;flex-direction:column;gap:1px}
+  .leg-pct{font-size:11px;color:var(--gray);font-weight:600}
+  .legend .amt{margin-left:auto;font-weight:700;color:var(--navy);padding-left:16px;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);
+    padding:11px 14px;border-bottom:2px solid var(--line);font-weight:600;background:#FAFBFD}
+  td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px}
+  tr:last-child td{border-bottom:none}
+  tbody tr{transition:.12s} tbody tr:hover{background:var(--pale)}
+  .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-family:var(--font-num);letter-spacing:-.01em}
+  .kpi .value{font-variant-numeric:tabular-nums}
+  .emp-cell{display:flex;align-items:center;gap:11px}
+  .emp-ava{width:33px;height:33px;border-radius:50%;background:var(--pale);color:var(--navy);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px;flex-shrink:0}
+  .emp-name{font-weight:600;color:var(--ink)}
+  .emp-role{font-size:11.5px;color:var(--gray)}
+  .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .tag.ok{background:#E3F2E5;color:var(--green)} .tag.pend{background:#FDF3E0;color:var(--gold)}
+  .tag.warn{background:#FBE9E7;color:var(--red)} .tag.info{background:#E7F0FA;color:var(--blue)}
+  .btn{border:none;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;
+    font-family:inherit;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+  .btn-primary{background:var(--navy);color:#fff} .btn-primary:hover{background:#163a5c}
+  .btn-ghost{background:var(--pale);color:var(--navy)} .btn-ghost:hover{background:var(--lblue)}
+  .btn-sm{padding:7px 12px;font-size:12px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--navy);margin-bottom:6px}
+  .field input,.field select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+    font-size:14px;font-family:inherit;color:var(--ink);background:var(--white);transition:.15s}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.13)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  @media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+  .alert{background:var(--pale);border-left:4px solid var(--blue);padding:13px 16px;border-radius:8px;
+    font-size:12.5px;color:var(--navy);margin-bottom:18px;display:flex;gap:10px;align-items:flex-start}
+  .mini{font-size:11.5px;color:var(--gray)}
+  svg.ic{stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .totals-bar{display:flex;gap:22px;flex-wrap:wrap;padding:16px 20px;background:var(--navy);border-radius:12px;color:#fff;margin-top:14px}
+  .totals-bar .t{flex:1;min-width:125px} .totals-bar .t .l{font-size:11.5px;color:var(--lblue)}
+  .totals-bar .t .v{font-size:19px;font-weight:800;margin-top:3px}
+
+  /* comprobante */
+  .slip{max-width:560px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .slip-h{background:var(--navy);color:#fff;padding:20px 24px;display:flex;justify-content:space-between;align-items:flex-start}
+  .slip-h .co{font-size:17px;font-weight:800} .slip-h .co span{color:var(--lblue)}
+  .slip-h .doc{font-size:12px;color:var(--lblue);margin-top:3px}
+  .slip-h .per{text-align:right;font-size:12px;color:var(--lblue)}
+  .slip-emp{padding:16px 24px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between}
+  .slip-emp .n{font-weight:700;color:var(--navy);font-size:15px}
+  .slip-emp .r{font-size:12px;color:var(--gray)}
+  .slip-body{padding:8px 24px}
+  .slip-row{display:flex;justify-content:space-between;padding:9px 0;font-size:13px;border-bottom:1px solid #F1F5F9}
+  .slip-row .lbl{color:var(--gray)} .slip-row .val{font-weight:600;font-variant-numeric:tabular-nums}
+  .slip-row.ded .val{color:var(--red)} .slip-row.ear .val{color:var(--green)}
+  .slip-section{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);
+    font-weight:700;padding:14px 0 4px;border-bottom:2px solid var(--pale)}
+  .slip-net{background:var(--pale);padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+  .slip-net .lbl{font-weight:700;color:var(--navy);font-size:15px}
+  .slip-net .val{font-weight:800;color:var(--navy);font-size:23px;font-variant-numeric:tabular-nums}
+  .slip-foot{padding:12px 24px;background:#FAFBFD;font-size:10.5px;color:var(--gray);text-align:center;border-top:1px solid var(--line)}
+  .select-emp{margin-bottom:18px;max-width:360px}
+
+  /* cumplimiento ring */
+  .comp-hero{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+  .ring-wrap{position:relative;width:150px;height:150px;flex-shrink:0}
+  .ring-wrap .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring-wrap .pct .n{font-size:30px;font-weight:800;color:var(--navy)}
+  .ring-wrap .pct .l{font-size:11px;color:var(--gray)}
+  .comp-list{flex:1;min-width:280px}
+  .comp-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .comp-item:last-child{border:none}
+  .comp-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .comp-ic.ok{background:#E3F2E5;color:var(--green)} .comp-ic.warn{background:#FDF3E0;color:var(--gold)}
+  .comp-ic.bad{background:#FBE9E7;color:var(--red)}
+  .comp-txt{flex:1}
+  .comp-txt .t{font-weight:600;font-size:13.5px;color:var(--ink)}
+  .comp-txt .d{font-size:12px;color:var(--gray);margin-top:2px}
+  .comp-txt .law{font-size:11px;color:var(--blue);margin-top:3px;font-weight:600}
+
+  /* leyes cards */
+  .law-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .law-card{border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--white);transition:.18s;position:relative}
+  .law-card:hover{box-shadow:var(--shadow);border-color:var(--lblue);transform:translateY(-2px)}
+  .law-badge{display:inline-block;font-size:10.5px;font-weight:700;color:var(--blue);background:var(--pale);
+    padding:3px 9px;border-radius:6px;margin-bottom:9px;letter-spacing:.3px}
+  .law-card h4{font-size:15px;color:var(--navy);margin-bottom:7px}
+  .law-card p{font-size:12.5px;color:var(--gray);line-height:1.55}
+  .law-card .calc{margin-top:11px;padding-top:11px;border-top:1px dashed var(--line);font-size:12px;color:var(--ink)}
+  .law-card .calc b{color:var(--navy)}
+
+  /* wizard */
+  .wizard{max-width:640px}
+  .steps{display:flex;margin-bottom:24px;gap:0}
+  .step{flex:1;text-align:center;position:relative;font-size:12px;color:var(--gray)}
+  .step .circle{width:34px;height:34px;border-radius:50%;background:var(--pale);color:var(--gray);
+    display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 auto 6px;border:2px solid var(--line);transition:.2s}
+  .step.active .circle{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .step.done .circle{background:var(--green);color:#fff;border-color:var(--green)}
+  .step.active{color:var(--navy);font-weight:600}
+  .step::after{content:"";position:absolute;top:17px;left:60%;width:80%;height:2px;background:var(--line);z-index:-1}
+  .step:last-child::after{display:none}
+  .wizard-pane{display:none} .wizard-pane.active{display:block;animation:fade .3s}
+  .preview-box{background:var(--pale);border-radius:10px;padding:16px 18px;margin-top:8px}
+  .preview-box .pr-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}
+  .preview-box .pr-row .v{font-weight:700;color:var(--navy)}
+  .preview-box .pr-net{border-top:2px solid var(--lblue);margin-top:6px;padding-top:10px}
+  .preview-box .pr-net .v{font-size:18px}
+
+  /* auditoría */
+  .audit-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:22px}
+  .audit-card{border-radius:13px;padding:18px 20px;color:#fff}
+  .audit-card.done{background:linear-gradient(135deg,#2E7D32,#43A047)}
+  .audit-card.viable{background:linear-gradient(135deg,var(--navy),var(--blue))}
+  .audit-card.future{background:linear-gradient(135deg,#8A6A00,#BF8F00)}
+  .audit-card .n{font-size:30px;font-weight:800;margin-top:4px}
+  .audit-card .l{font-size:12.5px;opacity:.9}
+  .feat-row{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--line);
+    border-radius:10px;margin-bottom:9px;background:var(--white)}
+  .feat-ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .feat-ic.done{background:#E3F2E5;color:var(--green)}
+  .feat-ic.viable{background:#E7F0FA;color:var(--blue)}
+  .feat-ic.future{background:#FDF3E0;color:var(--gold)}
+  .feat-txt{flex:1}
+  .feat-txt .t{font-weight:600;font-size:13.5px}
+  .feat-txt .d{font-size:12px;color:var(--gray);margin-top:2px}
+  .feat-meta{text-align:right;flex-shrink:0}
+  .bar-track{height:7px;background:var(--pale);border-radius:5px;overflow:hidden;width:90px;margin-top:5px}
+  .bar-fill{height:100%;border-radius:5px}
+  .menu-btn{display:none;background:none;border:none;cursor:pointer;color:var(--navy);padding:8px;border-radius:8px;min-width:44px;min-height:44px;align-items:center;justify-content:center}
+  .menu-btn:hover{background:var(--pale)}
+
+  /* ===== ACCESIBILIDAD ===== */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .skip-link{position:absolute;left:-999px;top:0;z-index:999;background:var(--navy);color:#fff;padding:10px 18px;
+    border-radius:0 0 8px 0;font-size:13px;font-weight:600;text-decoration:none}
+  .skip-link:focus{left:0}
+  *:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:4px}
+  .nav-item:focus-visible{outline:3px solid var(--lblue);outline-offset:-2px}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* overlay para menú móvil */
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(16,42,80,.45);z-index:90}
+  .sidebar-overlay.show{display:block}
+
+  /* ===== RESPONSIVE (tablet + móvil) ===== */
+  @media(max-width:1024px){
+    .row{grid-template-columns:1fr}
+    .content{padding:20px 22px}
+    .topbar{padding:13px 22px}
+  }
+  @media(max-width:860px){
+    .sidebar{position:fixed;left:-260px;top:0;z-index:100;transition:left .28s ease;box-shadow:4px 0 24px rgba(16,42,80,.18)}
+    .sidebar.open{left:0}
+    .menu-btn{display:flex}
+    .content{padding:16px}
+    .topbar{padding:12px 16px}
+    .topbar h1{font-size:17px}
+    .chip-co{max-width:130px}
+    .kpi-grid{grid-template-columns:1fr 1fr}
+    .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .table-scroll table{min-width:560px}
+    .btn{min-height:40px}
+    .nav-item{padding:12px;font-size:14.5px}
+  }
+  @media(max-width:520px){
+    .kpi-grid{grid-template-columns:1fr}
+    .grid2,.grid3{grid-template-columns:1fr}
+    .period{display:none}
+    .topbar-right{gap:8px}
+    .slip{max-width:100%}
+    .totals-bar .t{min-width:calc(50% - 11px)}
+    .law-grid{grid-template-columns:1fr}
+    .comp-hero{flex-direction:column;text-align:center}
+  }
+
+  /* ===== BOTONES DE ICONO ===== */
+  .btn-icon{background:var(--pale);border:1px solid var(--line);border-radius:8px;width:34px;height:34px;
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--navy);
+    transition:.15s;margin-left:4px;vertical-align:middle}
+  .btn-icon:hover{background:var(--lblue)}
+  .btn-icon.danger{color:var(--red)} .btn-icon.danger:hover{background:#FBE9E7}
+  .btn-icon.ok-ic{color:var(--green)} .btn-icon.ok-ic:hover{background:#E3F2E5}
+
+  /* ===== BUSCADOR ===== */
+  .search-box{display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--line);
+    border-radius:9px;padding:7px 12px;min-width:250px;color:var(--gray);transition:.15s}
+  .search-box:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.13)}
+  .search-box input{border:none;outline:none;font-size:13px;font-family:inherit;color:var(--ink);width:100%;background:none}
+  @media(max-width:520px){.search-box{min-width:100%}}
+
+  /* ===== MODAL ===== */
+  .modal-overlay{position:fixed;inset:0;background:rgba(16,42,80,.5);z-index:200;display:flex;
+    align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;animation:fade .2s}
+  .modal{background:var(--white);border-radius:16px;width:100%;box-shadow:0 20px 60px rgba(16,42,80,.3);animation:pop .25s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes pop{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+  .modal-h{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+  .modal-h h3{font-size:16px;font-weight:700;color:var(--navy)}
+  .modal-b{padding:20px 22px}
+
+  /* ===== CALENDARIO ===== */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--gray);padding:4px 0}
+  .cal-cell{position:relative;aspect-ratio:1;border:1px solid var(--line);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--ink);background:var(--white)}
+  .cal-cell.empty{border:none;background:none}
+  .cal-cell.on{background:linear-gradient(135deg,var(--blue),var(--lblue));color:#fff;font-weight:700;border-color:var(--blue)}
+  .cal-cell .cal-dot{position:absolute;top:3px;right:4px;background:var(--navy);color:#fff;font-size:9px;
+    font-weight:700;width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .cal-legend-dot{width:13px;height:13px;border-radius:4px;background:linear-gradient(135deg,var(--blue),var(--lblue));display:inline-block}
+  @media(max-width:520px){.cal-cell{font-size:11px}.cal-cell .cal-dot{width:13px;height:13px;font-size:8px}}
+
+  /* ===== LISTA DE ALERTAS ===== */
+  .alert-list{display:flex;flex-direction:column;gap:8px}
+  .alert-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:11px;border:1px solid var(--line);
+    background:var(--white);cursor:pointer;text-align:left;width:100%;font-family:inherit;transition:.15s}
+  .alert-item:hover{border-color:var(--lblue);background:var(--pale);transform:translateX(2px)}
+  .alert-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .alert-item.warn .alert-ic{background:#FDF3E0;color:var(--gold)}
+  .alert-item.bad .alert-ic{background:#FBE9E7;color:var(--red)}
+  .alert-item.info .alert-ic{background:#E7F0FA;color:var(--blue)}
+  .alert-body{flex:1;min-width:0}
+  .alert-t{display:block;font-weight:600;font-size:13.5px;color:var(--ink)}
+  .alert-d{display:block;font-size:12px;color:var(--gray);margin-top:2px}
+  .alert-arrow{color:var(--gray);flex-shrink:0}
+
+  /* ===== EXPEDIENTE / AMONESTACIONES ===== */
+  .field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+    font-size:14px;font-family:inherit;color:var(--ink);background:var(--white);resize:vertical;line-height:1.5}
+  .field textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.13)}
+  .chip-grav{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;vertical-align:middle}
+  .timeline{position:relative;padding-left:8px}
+  .tl-item{position:relative;padding:0 0 4px 26px;margin-bottom:14px}
+  .tl-item::before{content:"";position:absolute;left:5px;top:6px;bottom:-14px;width:2px;background:var(--line)}
+  .tl-item:last-child::before{display:none}
+  .tl-marker{position:absolute;left:0;top:5px;width:12px;height:12px;border-radius:50%;border:2px solid var(--white);box-shadow:0 0 0 2px var(--line);z-index:1}
+  .tl-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .tl-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .tl-emp{font-weight:700;color:var(--navy);font-size:14px}
+  .tl-meta{font-size:11.5px;color:var(--gray);font-weight:600;white-space:nowrap}
+  .tl-asunto{font-weight:600;font-size:13.5px;color:var(--ink);margin-bottom:4px}
+  .tl-detalle{font-size:13px;color:var(--gray);line-height:1.6}
+  .tl-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .rank-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .rank-row:last-child{border-bottom:none}
+  .rank-row .emp-cell{min-width:150px;flex-shrink:0}
+  .rank-bar-wrap{flex:1;height:10px;background:var(--pale);border-radius:6px;overflow:hidden}
+  .rank-bar{height:100%;background:linear-gradient(90deg,var(--gold),#D9A521);border-radius:6px;transition:width .8s ease}
+  .rank-n{font-weight:800;color:var(--navy);font-family:var(--font-num);min-width:22px;text-align:right}
+  @media(max-width:520px){.rank-row .emp-cell{min-width:110px}.tl-meta{white-space:normal}}
+
+  /* ===== ACTA DE AMONESTACIÓN ===== */
+  .acta{background:#fff;border:1px solid var(--line);border-radius:10px;padding:28px 30px}
+  .acta-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+    padding-bottom:16px;border-bottom:2px solid var(--navy);margin-bottom:18px}
+  .acta-co{font-size:20px;font-weight:800;color:var(--navy)} .acta-co span{color:var(--blue)}
+  .acta-emp{font-size:11.5px;color:var(--gray);margin-top:2px}
+  .acta-tipo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    border:1.5px solid;border-radius:6px;padding:5px 11px;white-space:nowrap}
+  .acta-titulo{font-size:17px;color:var(--navy);text-align:center;margin-bottom:20px;letter-spacing:.3px}
+  .acta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;margin-bottom:20px}
+  .acta-grid>div{display:flex;flex-direction:column;gap:2px;border-bottom:1px dotted var(--line);padding-bottom:6px}
+  .acta-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);font-weight:600}
+  .acta-val{font-size:14px;color:var(--ink);font-weight:600}
+  .acta-sec{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);
+    font-weight:700;border-bottom:1px solid var(--pale);padding-bottom:4px;margin:16px 0 8px}
+  .acta-txt{font-size:13.5px;color:var(--ink);line-height:1.7}
+  .acta-firmas{display:flex;gap:40px;margin-top:44px}
+  .acta-firma{flex:1;text-align:center;font-size:12px;color:var(--gray)}
+  .acta-linea{border-top:1.5px solid var(--ink);margin-bottom:6px}
+  .acta-foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);
+    font-size:10.5px;color:var(--gray);text-align:center}
+  @media(max-width:520px){.acta-grid{grid-template-columns:1fr}.acta-firmas{flex-direction:column;gap:28px}}
+
+  /* ===== BOTÓN SOLUCIONAR Y GUÍAS ===== */
+  .alert-item{align-items:center}
+  .alert-fix{flex-shrink:0;white-space:nowrap}
+  .comp-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+  .comp-fix{white-space:nowrap}
+  .guia-base{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--blue);
+    background:var(--pale);padding:5px 11px;border-radius:7px;margin-bottom:14px}
+  .guia-intro{font-size:13.5px;color:var(--gray);line-height:1.65;margin-bottom:18px}
+  .guia-pasos{list-style:none;counter-reset:none;display:flex;flex-direction:column;gap:12px}
+  .guia-pasos li{display:flex;align-items:flex-start;gap:13px}
+  .guia-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;
+    font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:var(--font-num)}
+  .guia-txt{font-size:13.5px;color:var(--ink);line-height:1.6;padding-top:3px}
+  @media(max-width:520px){.comp-actions{width:100%;margin-top:8px}.alert-item{flex-wrap:wrap}.alert-fix{width:100%;margin-top:8px;justify-content:center}}
+
+  /* ===== USUARIOS Y ROLES ===== */
+  .user-menu{position:relative}
+  .user-btn{display:flex;align-items:center;gap:9px;background:var(--pale);border:1px solid var(--line);
+    border-radius:11px;padding:5px 10px 5px 6px;cursor:pointer;transition:.15s;font-family:inherit}
+  .user-btn:hover{background:var(--lblue)}
+  .user-info{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+  .user-name{font-size:13px;font-weight:700;color:var(--ink)}
+  .user-role{font-size:11px;font-weight:600}
+  .user-dropdown{position:absolute;right:0;top:calc(100% + 8px);width:270px;background:var(--white);
+    border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 40px rgba(16,42,80,.22);
+    padding:8px;z-index:150;display:none;animation:pop .18s ease}
+  .user-dropdown.open{display:block}
+  .ud-title{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);font-weight:700;padding:6px 10px 8px}
+  .ud-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;background:none;
+    border-radius:9px;cursor:pointer;text-align:left;font-family:inherit;transition:.12s}
+  .ud-item:hover{background:var(--pale)}
+  .ud-item.active{background:var(--pale)}
+  .ud-ava{width:34px;height:34px;border-radius:9px;color:#fff;font-weight:700;font-size:12px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ud-info{flex:1;display:flex;flex-direction:column;line-height:1.25}
+  .ud-name{font-size:13px;font-weight:600;color:var(--ink)}
+  .ud-role{font-size:11.5px;color:var(--gray)}
+  .ud-item .ic{color:var(--green)}
+  .ud-sep{height:1px;background:var(--line);margin:6px 4px}
+  .ud-manage{display:flex;align-items:center;gap:9px;width:100%;padding:10px;border:none;background:none;
+    border-radius:9px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--navy);transition:.12s}
+  .ud-manage:hover{background:var(--pale)}
+  .rol-badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 11px;border-radius:20px}
+  .rol-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+  .rol-card{background:var(--white);border:1px solid var(--line);border-radius:13px;padding:16px 18px;box-shadow:var(--shadow)}
+  .rol-card-h{font-size:15px;font-weight:800;margin-bottom:4px}
+  .rol-card-d{font-size:12.5px;color:var(--gray);line-height:1.5;margin-bottom:12px;min-height:36px}
+  .rol-card-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--navy);font-weight:600;
+    border-top:1px solid var(--line);padding-top:10px}
+  @media(max-width:760px){.user-info{display:none}.rol-cards{grid-template-columns:1fr}}
+
+  /* ===== IMPRESIÓN / PDF ===== */
+  @media print{
+    @page{margin:14mm}
+    body.printing *{visibility:hidden}
+    body.printing .print-target,body.printing .print-target *{visibility:visible}
+    body.printing .print-target{position:absolute;left:0;top:0;width:100%;box-shadow:none!important}
+    body.printing .print-target .no-print,body.printing .btn{display:none!important}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<a href="#content" class="skip-link">Saltar al contenido principal</a>
+<div id="liveRegion" aria-live="polite" class="sr-only"></div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="cerrarMenu()" aria-hidden="true"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Barra lateral de navegación">
+    <div class="brand">
+      <div class="brand-logo">P</div>
+      <div class="brand-name">Planilla<span>Digital</span></div>
+    </div>
+    <nav class="nav" role="navigation" aria-label="Menú principal">
+      <div class="nav-label" data-grupo-label="Principal">Principal</div>
+      <button class="nav-item active" data-view="dashboard" data-grupo="Principal" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Inicio</button>
+      <button class="nav-item" data-view="empleados" data-grupo="Principal"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>Colaboradores</button>
+      <button class="nav-item" data-view="alta" data-grupo="Principal"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Registrar colaborador</button>
+      <button class="nav-item" data-view="planilla" data-grupo="Principal"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>Cálculo de planilla</button>
+      <button class="nav-item" data-view="colilla" data-grupo="Principal"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/></svg>Recibos de pago</button>
+      <div class="nav-label" data-grupo-label="Prestaciones">Prestaciones</div>
+      <button class="nav-item" data-view="vacaciones" data-grupo="Prestaciones"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 22s4-10 10-10 10 10 10 10"/><path d="M12 12V2"/><path d="M12 2c2 2 2 5 0 7"/></svg>Control de vacaciones</button>
+      <button class="nav-item" data-view="liquidacion" data-grupo="Prestaciones"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Liquidaciones</button>
+      <button class="nav-item" data-view="expediente" data-grupo="Prestaciones"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>Expediente y amonestaciones</button>
+      <button class="nav-item" data-view="bajas" data-grupo="Prestaciones"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="22" y2="13"/><line x1="22" y1="8" x2="17" y2="13"/></svg>Personal dado de baja</button>
+      <div class="nav-label" data-grupo-label="Cumplimiento">Cumplimiento</div>
+      <button class="nav-item" data-view="cumplimiento" data-grupo="Cumplimiento"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Regulaciones</button>
+      <button class="nav-item" data-view="leyes" data-grupo="Cumplimiento"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M3 7h18"/><path d="M7 7l-3 6h6z"/><path d="M17 7l-3 6h6z"/></svg>Análisis de leyes</button>
+      <div class="nav-label" data-grupo-label="Análisis">Análisis</div>
+      <button class="nav-item" data-view="reportes" data-grupo="Análisis"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Reportes</button>
+      <button class="nav-item" data-view="historial" data-grupo="Análisis"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>Historial de períodos</button>
+      <button class="nav-item" data-view="empresa" data-grupo="Análisis"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9" y2="9"/><line x1="9" y1="13" x2="9" y2="13"/></svg>Datos de la empresa</button>
+      <div class="nav-label" data-grupo-label="Administración">Administración</div>
+      <button class="nav-item" data-view="usuarios" data-grupo="Administración"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Usuarios y roles</button>
+    </nav>
+    <div class="sidebar-foot">Tu nómina, más simple.<br>© 2026 PlanillaDigital</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="menu-btn" id="menuBtn" onclick="toggleMenu()" aria-label="Abrir menú de navegación" aria-expanded="false" aria-controls="sidebar">
+          <svg class="ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div><h1 id="viewTitle">Resumen general</h1><div class="sub" id="viewSub">Panorama de la nómina del período actual</div></div>
+      </div>
+      <div class="topbar-right">
+        <div class="chip-co" id="chipCo" title="Empresa activa">Empresa Demo, S.A.</div>
+        <div class="period"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span id="periodLabel">Julio 2026</span></div>
+        <button class="theme-btn" id="themeBtn" onclick="toggleTema()" aria-label="Cambiar entre modo claro y oscuro" title="Cambiar tema">
+          <svg class="ic sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="ic moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+        <div class="user-menu">
+          <button class="user-btn" id="userBtn" onclick="toggleUserMenu(event)" aria-label="Menú de usuario" aria-haspopup="true" aria-expanded="false">
+            <span class="avatar" id="userAvatar">JJ</span>
+            <span class="user-info"><span class="user-name" id="userName">Justin Jones</span><span class="user-role" id="userRole">Administrador</span></span>
+            <svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="user-dropdown" id="userDropdown" role="menu" aria-label="Cambiar de usuario"></div>
+        </div>
+      </div>
+    </header>
+    <main class="content" id="content" role="main" tabindex="-1"><!-- vistas se inyectan aquí --></main>
+  </div>
+</div>
+<script>
+/* ============ ESTADO GLOBAL ============ */
+const TASA = { cssEmp:0.0975, seEmp:0.0125, cssPat:0.1325, sePat:0.0150, riesgo:0.0105,
+  isrExento:11000, isrTramo1:0.15, isrTope1:50000, isrTramo2:0.25, isrFija2:5850 };
+
+let empresa = {
+  nombre:"Empresa Demo, S.A.", ruc:"155612345-2-2023", dv:"48",
+  actividad:"Servicios profesionales", direccion:"Obarrio, Ciudad de Panamá",
+  correo:"planilla@empresademo.pa", riesgoCIIU:1.05
+};
+
+let empleados = [
+  {id:1, nombre:"María González", cedula:"8-756-1204", cargo:"Gerente de operaciones", salario:2200, bono:150, extras:0, otros:0, ingreso:"2021-03-01", vacGozadas:150, contrato:true},
+  {id:2, nombre:"Carlos Him", cedula:"8-812-0455", cargo:"Desarrollador senior", salario:1800, bono:0, extras:0, otros:0, ingreso:"2022-06-15", vacGozadas:120, contrato:true},
+  {id:3, nombre:"Ana Batista", cedula:"9-745-882", cargo:"Analista contable", salario:1200, bono:100, extras:0, otros:50, ingreso:"2023-01-10", vacGozadas:90, contrato:true},
+  {id:4, nombre:"Luis Him", cedula:"8-901-233", cargo:"Soporte técnico", salario:950, bono:0, extras:0, otros:0, ingreso:"2024-02-01", vacGozadas:45, contrato:false},
+  {id:5, nombre:"Rosa Mendoza", cedula:"4-322-908", cargo:"Asistente administrativa", salario:750, bono:0, extras:0, otros:0, ingreso:"2025-05-20", vacGozadas:15, contrato:false},
+];
+let bajas = [];            // colaboradores liquidados (histórico)
+let solicitudesVac = [     // solicitudes de vacaciones
+  {id:1, empId:2, inicio:"2026-08-04", fin:"2026-08-15", dias:10, estado:"pendiente", motivo:"Vacaciones familiares"},
+  {id:3, empId:1, inicio:"2026-07-21", fin:"2026-07-25", dias:5, estado:"aprobada", motivo:"Descanso"},
+];
+let nextSolId = 4;
+let liquidaciones = [];    // liquidaciones ejecutadas (histórico)
+// Comentarios, advertencias y amonestaciones adjudicadas a colaboradores
+let amonestaciones = [
+  {id:1, empId:4, fecha:"2026-06-10", tipo:"verbal", gravedad:"leve", asunto:"Llegadas tarde reiteradas", detalle:"Se conversó sobre tres llegadas tarde en la semana. El colaborador se comprometió a mejorar la puntualidad.", autor:"Supervisión"},
+  {id:2, empId:4, fecha:"2026-06-28", tipo:"escrita", gravedad:"media", asunto:"Incumplimiento de reporte", detalle:"No entregó el reporte de soporte del período pese al recordatorio. Segunda observación por el mismo motivo.", autor:"Jefatura de operaciones"},
+  {id:3, empId:3, fecha:"2026-07-05", tipo:"reconocimiento", gravedad:"positiva", asunto:"Cierre contable sin errores", detalle:"Reconocimiento por completar el cierre mensual sin observaciones y antes de la fecha límite.", autor:"Jefatura contable"},
+];
+let nextAmonId = 4;
+
+/* ============ USUARIOS Y ROLES ============ */
+// Roles: admin (control total), supervisor (opera, no configura ni gestiona usuarios), colaborador (solo consulta)
+const ROLES = {
+  admin:       {nombre:"Administrador", color:"#1F4E79", desc:"Control total del sistema"},
+  supervisor:  {nombre:"Supervisor",   color:"#BF8F00", desc:"Opera la nómina, sin configuración"},
+  colaborador: {nombre:"Colaborador",  color:"#2E7D32", desc:"Consulta su información y recibos"}
+};
+// Qué vistas puede ver cada rol
+const PERMISOS = {
+  admin: ["dashboard","empleados","alta","planilla","colilla","vacaciones","liquidacion","expediente","bajas","cumplimiento","leyes","reportes","historial","empresa","usuarios"],
+  supervisor: ["dashboard","empleados","planilla","colilla","vacaciones","liquidacion","expediente","cumplimiento","leyes","reportes","historial"],
+  colaborador: ["dashboard","colilla","vacaciones","leyes"]
+};
+let usuarios = [
+  {id:1, nombre:"Justin Jones", rol:"admin", correo:"justin@empresademo.pa"},
+  {id:2, nombre:"Diana Jaramillo", rol:"supervisor", correo:"diana@empresademo.pa"},
+  {id:3, nombre:"Emanuel Iturriaga", rol:"colaborador", correo:"emanuel@empresademo.pa"},
+];
+let usuarioActivoId = 1;
+let nextUsuarioId = 4;
+function usuarioActivo(){ return usuarios.find(u=>u.id===usuarioActivoId)||usuarios[0]; }
+function rolActivo(){ return usuarioActivo()?.rol||"admin"; }
+function puedeVer(vista){ return (PERMISOS[rolActivo()]||[]).includes(vista); }
+let nextId = 6;
+let histNeto = [4980, 5180, 5340, 5510, 5690];
+let wizardStep = 1;
+let wizardData = {};
+
+// Período de trabajo actual y archivo de períodos cerrados
+let periodoActual = "Julio 2026";
+let historialPeriodos = []; // [{periodo, fecha, empleados, bruto, neto, css, se, isr, cargaPat, costoTotal, decimo}]
+
+/* ============ PERSISTENCIA LOCAL ============ */
+const DB_KEY = "planilladigital_v2";
+let dbDisponible = (()=>{ try{ const k="__t"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }catch(e){ return false; } })();
+
+function guardar(){
+  if(!dbDisponible) return;
+  try{
+    localStorage.setItem(DB_KEY, JSON.stringify({
+      empresa, empleados, nextId, histNeto, periodoActual, historialPeriodos,
+      bajas, solicitudesVac, nextSolId, liquidaciones, amonestaciones, nextAmonId,
+      usuarios, usuarioActivoId, nextUsuarioId
+    }));
+  }catch(e){ /* almacenamiento lleno o no disponible */ }
+}
+function cargar(){
+  if(!dbDisponible) return false;
+  try{
+    const raw=localStorage.getItem(DB_KEY);
+    if(!raw) return false;
+    const d=JSON.parse(raw);
+    if(d.empresa) empresa=d.empresa;
+    if(Array.isArray(d.empleados)) empleados=d.empleados;
+    if(d.nextId) nextId=d.nextId;
+    if(Array.isArray(d.histNeto)) histNeto=d.histNeto;
+    if(d.periodoActual) periodoActual=d.periodoActual;
+    if(Array.isArray(d.historialPeriodos)) historialPeriodos=d.historialPeriodos;
+    if(Array.isArray(d.bajas)) bajas=d.bajas;
+    if(Array.isArray(d.solicitudesVac)) solicitudesVac=d.solicitudesVac;
+    if(d.nextSolId) nextSolId=d.nextSolId;
+    if(Array.isArray(d.liquidaciones)) liquidaciones=d.liquidaciones;
+    if(Array.isArray(d.amonestaciones)) amonestaciones=d.amonestaciones;
+    if(d.nextAmonId) nextAmonId=d.nextAmonId;
+    if(Array.isArray(d.usuarios)) usuarios=d.usuarios;
+    if(d.usuarioActivoId) usuarioActivoId=d.usuarioActivoId;
+    if(d.nextUsuarioId) nextUsuarioId=d.nextUsuarioId;
+    return true;
+  }catch(e){ return false; }
+}
+function reiniciarDatos(){
+  if(!confirm("Esto borrará todos los datos guardados y restaurará el ejemplo inicial. ¿Continuar?")) return;
+  if(dbDisponible) localStorage.removeItem(DB_KEY);
+  location.reload();
+}
+
+/* ============ TEMA (MODO OSCURO) ============ */
+const TEMA_KEY = "planilladigital_tema";
+function aplicarTema(t){
+  document.documentElement.setAttribute("data-theme", t);
+  const b=document.getElementById("themeBtn");
+  if(b) b.setAttribute("aria-label", t==="dark"?"Activar modo claro":"Activar modo oscuro");
+}
+function toggleTema(){
+  const actual=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
+  aplicarTema(actual);
+  try{ if(dbDisponible) localStorage.setItem(TEMA_KEY, actual); }catch(e){}
+  anunciar(actual==="dark"?"Modo oscuro activado":"Modo claro activado");
+}
+function cargarTema(){
+  let t="light"; // el modo claro es el predeterminado
+  try{ if(dbDisponible){ const g=localStorage.getItem(TEMA_KEY); if(g) t=g; } }catch(e){}
+  aplicarTema(t);
+}
+
+/* ============ USUARIO ACTIVO Y MENÚ ============ */
+function actualizarUsuarioUI(){
+  const u=usuarioActivo();
+  const av=document.getElementById("userAvatar"), nm=document.getElementById("userName"), rl=document.getElementById("userRole");
+  if(av) av.textContent=initials(u.nombre);
+  if(nm) nm.textContent=u.nombre;
+  if(rl){ rl.textContent=ROLES[u.rol].nombre; rl.style.color=ROLES[u.rol].color; }
+}
+function toggleUserMenu(ev){
+  if(ev) ev.stopPropagation();
+  const dd=document.getElementById("userDropdown"), btn=document.getElementById("userBtn");
+  if(dd.classList.contains("open")){ dd.classList.remove("open"); btn.setAttribute("aria-expanded","false"); return; }
+  const items=usuarios.map(u=>`<button class="ud-item ${u.id===usuarioActivoId?'active':''}" role="menuitem" onclick="cambiarUsuario(${u.id})">
+    <span class="ud-ava" style="background:${ROLES[u.rol].color}">${initials(u.nombre)}</span>
+    <span class="ud-info"><span class="ud-name">${u.nombre}</span><span class="ud-role">${ROLES[u.rol].nombre}</span></span>
+    ${u.id===usuarioActivoId?'<svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>':""}
+  </button>`).join("");
+  const admin=rolActivo()==="admin"
+    ? `<div class="ud-sep"></div><button class="ud-manage" role="menuitem" onclick="cerrarUserMenu();switchView('usuarios')"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Gestionar usuarios</button>`
+    : "";
+  dd.innerHTML=`<div class="ud-title">Cambiar de usuario</div>${items}${admin}`;
+  dd.classList.add("open"); btn.setAttribute("aria-expanded","true");
+}
+function cerrarUserMenu(){
+  const dd=document.getElementById("userDropdown"), btn=document.getElementById("userBtn");
+  if(dd) dd.classList.remove("open"); if(btn) btn.setAttribute("aria-expanded","false");
+}
+function cambiarUsuario(id){
+  usuarioActivoId=id;
+  cerrarUserMenu(); actualizarUsuarioUI(); construirMenu(); guardar();
+  const u=usuarioActivo();
+  anunciar(`Sesión activa: ${u.nombre}, ${ROLES[u.rol].nombre}`);
+  switchView("dashboard");
+}
+document.addEventListener("click",()=>cerrarUserMenu());
+
+const fmt = n => "B/. " + n.toLocaleString("es-PA",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt0 = n => "B/. " + Math.round(n).toLocaleString("es-PA");
+const initials = n => n.trim().split(" ").slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
+const empById = id => empleados.find(e=>e.id===id);
+function diasEntre(inicio,fin){
+  const a=new Date(inicio), b=new Date(fin);
+  if(isNaN(a)||isNaN(b)) return 0;
+  return Math.max(Math.round((b-a)/(1000*60*60*24))+1,0);
+}
+function fmtFecha(iso){
+  if(!iso) return "—";
+  const d=new Date(iso); if(isNaN(d)) return iso;
+  return d.toLocaleDateString("es-PA",{day:"2-digit",month:"short",year:"numeric"});
+}
+
+function isrMensual(brutoMes){
+  // Base anual sobre 12 sueldos. El décimo tercer mes tributa por separado
+  // y no se incluye en la proyección mensual del ISR (práctica DGI).
+  const anual = brutoMes*12;
+  let a=0;
+  if(anual<=TASA.isrExento) a=0;
+  else if(anual<=TASA.isrTope1) a=(anual-TASA.isrExento)*TASA.isrTramo1;
+  else a=TASA.isrFija2+(anual-TASA.isrTope1)*TASA.isrTramo2;
+  return a/12;
+}
+function calc(e){
+  const bruto=(+e.salario)+(+e.bono||0)+(+e.extras||0);
+  const css=bruto*TASA.cssEmp, se=bruto*TASA.seEmp, isr=isrMensual(bruto), otros=(+e.otros||0);
+  const dedLey=css+se+isr, neto=bruto-dedLey-otros;
+  const cssPat=bruto*TASA.cssPat, sePat=bruto*TASA.sePat, riesgo=bruto*(empresa.riesgoCIIU/100);
+  const cargaPat=cssPat+sePat+riesgo, costoTotal=bruto+cargaPat, decimo=bruto/12;
+  return {bruto,css,se,isr,otros,dedLey,neto,cssPat,sePat,riesgo,cargaPat,costoTotal,decimo};
+}
+function totales(){
+  return empleados.reduce((a,e)=>{const c=calc(e);
+    for(const k of ["bruto","neto","css","se","isr","dedLey","cssPat","sePat","riesgo","cargaPat","costoTotal","decimo"]) a[k]+=c[k];
+    return a;},{bruto:0,neto:0,css:0,se:0,isr:0,dedLey:0,cssPat:0,sePat:0,riesgo:0,cargaPat:0,costoTotal:0,decimo:0});
+}
+function antiguedad(fecha){
+  const ini=new Date(fecha), hoy=new Date(2026,6,15);
+  const años=(hoy-ini)/(1000*60*60*24*365.25);
+  return años;
+}
+
+/* ============ VACACIONES (Art. 52-54 C.T.) ============ */
+// 30 días por cada 11 meses continuos → causación diaria ≈ 30/335 días laborados.
+function vacaciones(e){
+  const ini=new Date(e.ingreso), hoy=new Date(2026,6,15);
+  const dias=(hoy-ini)/(1000*60*60*24);
+  const ciclos=dias/335;                 // ciclos de 11 meses cumplidos
+  const causados=Math.floor(ciclos*30);  // días de vacaciones generados en total
+  // Días ya gozados: base histórica + solicitudes aprobadas registradas en el sistema.
+  const aprobados=solicitudesVac.filter(s=>s.empId===e.id&&s.estado==="aprobada")
+    .reduce((a,s)=>a+(+s.dias||0),0);
+  const gozados=(+e.vacGozadas||0)+aprobados;
+  // La ley obliga a gozar las vacaciones cada período; el pasivo exigible se limita
+  // a lo no gozado del ciclo vigente y a lo sumo el anterior (máx. 60 días acumulables).
+  const pendientes=Math.min(Math.max(causados-gozados,0),60);
+  const salarioDiario=(+e.salario)/30;
+  const valorPendiente=pendientes*salarioDiario;
+  return {causados,gozados,aprobados,pendientes,salarioDiario,valorPendiente};
+}
+
+/* ============ LIQUIDACIÓN (Art. 224 y conexos) ============ */
+function liquidacion(e,motivo){
+  const c=calc(e);
+  const años=antiguedad(e.ingreso);
+  const salarioSemanal=(+e.salario)/4.33;
+  const salarioDiario=(+e.salario)/30;
+  // Prima de antigüedad: una semana de salario por año trabajado (siempre se paga).
+  const primaAntiguedad=salarioSemanal*años;
+  // Décimo tercer mes proporcional acumulado desde la última partida.
+  const decimoProporcional=(+e.salario)/12*getMesesDecimo();
+  // Vacaciones proporcionales pendientes.
+  const vac=vacaciones(e);
+  // Indemnización por despido injustificado (Art. 225): escala progresiva.
+  // 3.4 semanas de salario por año en los primeros 10 años; 1 semana por año adicional.
+  let indemnizacion=0;
+  if(motivo==="injustificado"){
+    const primeros=Math.min(años,10);
+    const adicionales=Math.max(años-10,0);
+    indemnizacion=salarioSemanal*(primeros*3.4 + adicionales*1);
+  }
+  const total=primaAntiguedad+decimoProporcional+vac.valorPendiente+indemnizacion;
+  return {años,salarioSemanal,salarioDiario,primaAntiguedad,decimoProporcional,
+    vacProporcional:vac.valorPendiente,vacDias:vac.pendientes,indemnizacion,total,motivo};
+}
+// Meses acumulados de décimo desde la última partida pagada (abr/ago/dic).
+function getMesesDecimo(){
+  const mes=6; // julio (índice 6). Última partida: 15 de abril → 3 meses acumulados.
+  if(mes>=11) return mes-11;
+  if(mes>=7) return mes-7;
+  return mes-3;
+}
+
+/* ============ EXPORTACIÓN ============ */
+function descargarCSV(nombre,filas){
+  const bom="\uFEFF"; // BOM para que Excel reconozca UTF-8
+  const contenido=bom+filas.map(f=>f.map(celda=>{
+    const s=String(celda??"");
+    return /[",;\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;
+  }).join(";")).join("\r\n");
+  const blob=new Blob([contenido],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=nombre; a.click();
+  setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} },1500);
+  anunciar(`Archivo ${nombre} descargado`);
+}
+function imprimirElemento(sel){
+  document.body.classList.add("printing");
+  const el=document.querySelector(sel);
+  if(el) el.classList.add("print-target");
+  window.print();
+  setTimeout(()=>{
+    document.body.classList.remove("printing");
+    if(el) el.classList.remove("print-target");
+  },500);
+}
+// Región viva para lectores de pantalla
+function anunciar(msg){
+  let r=document.getElementById("liveRegion");
+  if(r){ r.textContent=""; setTimeout(()=>r.textContent=msg,50); }
+}
+
+/* ============ DONUT ============ */
+function donutSVG(id,legId,data){
+  const total=data.reduce((s,d)=>s+d.val,0)||1; let offset=25;
+  let inner=`<circle cx="21" cy="21" r="15.9" fill="none" stroke="#EEF2F7" stroke-width="6"/>`;
+  data.forEach(d=>{const pct=d.val/total*100;
+    inner+=`<circle cx="21" cy="21" r="15.9" fill="none" stroke="${d.color}" stroke-width="6" stroke-dasharray="${pct} ${100-pct}" stroke-dashoffset="${offset}" style="transition:stroke-dasharray 1s ease"><title>${d.label}: ${fmt0(d.val)} (${pct.toFixed(1)}%)</title></circle>`;
+    offset-=pct;});
+  inner+=`<text x="21" y="20" text-anchor="middle" font-size="4.3" font-weight="800" fill="#1F4E79" font-family="var(--font)">${fmt0(total).replace('B/. ','B/.')}</text>
+    <text x="21" y="24.5" text-anchor="middle" font-size="2.5" fill="#5A6672">total</text>`;
+  const leg=data.map(d=>{const pct=(d.val/total*100).toFixed(1);
+    return `<li><span class="dot" style="background:${d.color}"></span><span class="leg-label">${d.label}<span class="leg-pct">${pct}%</span></span><span class="amt">${fmt0(d.val)}</span></li>`;}).join("");
+  return {svg:`<svg width="160" height="160" viewBox="0 0 42 42" role="img" aria-label="Gráfica de distribución">${inner}</svg>`, legend:leg};
+}
+function barsHTML(data,fmtK=true){
+  const max=Math.max(...data.map(d=>d.v))||1;
+  return data.map(d=>`<div class="bar-col">
+    <div class="bar-val">${fmtK?"B/."+(d.v/1000).toFixed(d.v<1000?1:0)+'k':Math.round(d.v)}</div>
+    <div class="bar" style="height:${d.v/max*100}%;${d.c?'background:linear-gradient(180deg,'+d.c+',#7FB0DC)':''}" title="${d.l}: ${fmt0(d.v)}"></div>
+    <div class="bar-lbl">${d.l}</div></div>`).join("");
+}
+
+/* ============ VISTAS ============ */
+const V = {};
+
+V.dashboard = ()=>{
+  const t=totales();
+  const serie=[...histNeto,t.neto], labels=["Feb","Mar","Abr","May","Jun","Jul"], max=Math.max(...serie);
+  const bars=serie.map((v,i)=>{const h=v/max*100,last=i===serie.length-1;
+    return `<div class="bar-col"><div class="bar-val">B/.${(v/1000).toFixed(1)}k</div>
+    <div class="bar" style="height:${h}%;${last?'background:linear-gradient(180deg,var(--navy),var(--blue))':''}" title="${labels[i]}: ${fmt0(v)}"></div>
+    <div class="bar-lbl">${labels[i]}</div></div>`;}).join("");
+  const d=donutSVG("d1","dl1",[
+    {label:"Salario neto",val:t.neto,color:"#2E75B6"},
+    {label:"Deducciones de ley",val:t.dedLey,color:"#BF8F00"},
+    {label:"Cargas patronales",val:t.cargaPat,color:"#548235"}]);
+  const venc=[
+    ["Cuota CSS + S. Educativo","Caja de Seguro Social","22 ago 2026",t.css+t.se+t.cssPat+t.sePat+t.riesgo,"pend"],
+    ["Retención de ISR","Dirección General de Ingresos","15 ago 2026",t.isr,"pend"],
+    ["Planilla mensual","Pago a colaboradores","30 jul 2026",t.neto,"ok"]];
+  return `
+  <div class="kpi-grid">
+    <div class="kpi"><div class="label">Empleados activos</div><div class="value">${empleados.length}</div><div class="meta">En planilla este período</div></div>
+    <div class="kpi g"><div class="label">Salario neto a pagar</div><div class="value">${fmt0(t.neto)}</div><div class="meta">Total del período</div></div>
+    <div class="kpi gold"><div class="label">Deducciones de ley</div><div class="value">${fmt0(t.dedLey)}</div><div class="meta">CSS + S. Educativo + ISR</div></div>
+    <div class="kpi rd"><div class="label">Costo total empleador</div><div class="value">${fmt0(t.costoTotal)}</div><div class="meta">Salarios + cargas patronales</div></div>
+  </div>
+  ${panelAlertas()}
+  <div class="row">
+    <div class="card"><div class="card-h"><h3>Salario neto por mes</h3><span class="hint">Últimos 6 meses (B/.)</span></div>
+      <div class="card-b"><div class="bars">${bars}</div></div></div>
+    <div class="card"><div class="card-h"><h3>Distribución de la nómina</h3></div>
+      <div class="card-b"><div class="donut-wrap">${d.svg}<ul class="legend">${d.legend}</ul></div></div></div>
+  </div>
+  <div class="card"><div class="card-h"><h3>Próximos vencimientos</h3><span class="hint">Obligaciones ante la CSS y la DGI</span></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr><th scope="col">Obligación</th><th scope="col">Entidad</th><th scope="col">Vence</th><th scope="col" style="text-align:right">Monto</th><th scope="col">Estado</th></tr></thead>
+    <tbody>${venc.map(v=>`<tr><td><b>${v[0]}</b></td><td class="mini">${v[1]}</td><td>${v[2]}</td><td class="num">${fmt(v[3])}</td><td><span class="tag ${v[4]}">${v[4]==="ok"?"Programado":"Pendiente"}</span></td></tr>`).join("")}</tbody></table></div></div></div>`;
+};
+
+/* ===== PANEL DE ALERTAS ===== */
+/* ===== GUÍAS DE SOLUCIÓN PASO A PASO ===== */
+const GUIAS={
+  contrato:{
+    titulo:"Registrar el contrato de trabajo",
+    base:"Art. 67-82 del Código de Trabajo",
+    intro:"Toda relación laboral en Panamá debe constar por escrito, en dos ejemplares, uno para cada parte. Así se registra en el sistema:",
+    pasos:[
+      "Ve a la sección Colaboradores en el menú lateral.",
+      "Ubica al colaborador sin contrato (aparece con la etiqueta ámbar Pendiente) y pulsa el botón de editar.",
+      "En el campo Contrato escrito, cambia la opción de Pendiente a Registrado.",
+      "Guarda los cambios. La alerta desaparecerá del inicio automáticamente.",
+      "Conserva el contrato físico firmado por ambas partes en el expediente del colaborador."
+    ],
+    ir:"empleados", irTxt:"Ir a Colaboradores"
+  },
+  vacaciones_vencidas:{
+    titulo:"Programar vacaciones acumuladas",
+    base:"Art. 52-54 del Código de Trabajo",
+    intro:"Las vacaciones son un derecho irrenunciable. Cuando un colaborador acumula 30 días o más, conviene programar su descanso para no generar un pasivo excesivo ni incumplir la ley.",
+    pasos:[
+      "Ve a la sección Control de vacaciones.",
+      "Pulsa Nueva solicitud y selecciona al colaborador con días acumulados.",
+      "Define las fechas de inicio y fin del descanso. El sistema calcula los días automáticamente.",
+      "Registra la solicitud y luego apruébala con el botón verde de la tabla.",
+      "Al aprobarla, el saldo de vacaciones del colaborador se descuenta de forma automática."
+    ],
+    ir:"vacaciones", irTxt:"Ir a Vacaciones"
+  },
+  solicitudes:{
+    titulo:"Resolver solicitudes de vacaciones",
+    base:"Art. 52 del Código de Trabajo",
+    intro:"Hay solicitudes de vacaciones esperando una decisión. Cada una debe aprobarse o rechazarse para mantener el saldo del equipo al día.",
+    pasos:[
+      "Ve a la sección Control de vacaciones.",
+      "En la tabla Solicitudes de vacaciones, ubica las que están en estado Pendiente.",
+      "Revisa las fechas y el saldo disponible del colaborador.",
+      "Pulsa el botón verde para aprobar o el rojo para rechazar.",
+      "Una solicitud aprobada descuenta el saldo y aparece en el calendario de vacaciones."
+    ],
+    ir:"vacaciones", irTxt:"Ir a Vacaciones"
+  },
+  sipe:{
+    titulo:"Declarar y pagar a la CSS vía SIPE",
+    base:"Ley 51 de 2005",
+    intro:"El Sistema de Ingresos y Prestaciones Económicas (SIPE) de la Caja de Seguro Social recibe la declaración mensual de la planilla. El pago vence entre los días 15 y 22 del mes siguiente, según el último dígito del RUC.",
+    pasos:[
+      "Ve a la sección Reportes y abre el Resumen para declaración SIPE.",
+      "Pulsa Exportar CSV para obtener el detalle de aportes del trabajador y del empleador.",
+      "Ingresa al portal SIPE de la CSS con las credenciales de la empresa.",
+      "Carga o transcribe los montos del resumen: cuota obrero-patronal y seguro educativo.",
+      "Genera la boleta de pago y cancela dentro de la fecha que corresponde al RUC de la empresa."
+    ],
+    ir:"reportes", irTxt:"Ir a Reportes"
+  },
+  isr:{
+    titulo:"Retener y remitir el ISR a la DGI",
+    base:"Código Fiscal, Art. 700",
+    intro:"El impuesto sobre la renta retenido a los colaboradores debe remitirse a la Dirección General de Ingresos. El sistema ya calcula la retención de cada período.",
+    pasos:[
+      "Ve a la sección Reportes y revisa el total de ISR retenido del período.",
+      "Verifica el desglose por colaborador en la sección Cálculo de planilla.",
+      "Ingresa al portal de la DGI (etax2) con el usuario de la empresa.",
+      "Presenta la declaración de retención del período correspondiente.",
+      "Realiza el pago antes del día 15 del mes siguiente."
+    ],
+    ir:"reportes", irTxt:"Ir a Reportes"
+  },
+  decimo:{
+    titulo:"Provisionar y pagar el décimo tercer mes",
+    base:"Art. 145 del Código de Trabajo",
+    intro:"El décimo tercer mes equivale a un mes de salario, pagado en tres partidas al año: 15 de abril, 15 de agosto y 15 de diciembre. El sistema provisiona una doceava parte cada mes.",
+    pasos:[
+      "Ve a la sección Reportes y abre el cuadro Provisión del décimo tercer mes.",
+      "Confirma el monto de la partida próxima a vencer.",
+      "Verifica que la provisión mensual se haya venido acumulando en cada período.",
+      "Paga la partida a cada colaborador en la fecha correspondiente.",
+      "Recuerda que sobre el décimo se aplican las deducciones de ley que correspondan."
+    ],
+    ir:"reportes", irTxt:"Ir a Reportes"
+  },
+  salario_minimo:{
+    titulo:"Ajustar salarios al mínimo vigente",
+    base:"Decreto Ejecutivo 13 de 2026",
+    intro:"Ningún salario puede estar por debajo del mínimo legal vigente según la actividad y la región. Si un colaborador está por debajo, debe ajustarse.",
+    pasos:[
+      "Ve a la sección Colaboradores e identifica al colaborador afectado.",
+      "Pulsa editar y revisa el salario base frente al mínimo de su categoría.",
+      "Actualiza el salario base al monto que corresponde por ley.",
+      "Guarda los cambios: la planilla y las deducciones se recalculan al instante.",
+      "Documenta el ajuste salarial en el expediente del colaborador."
+    ],
+    ir:"empleados", irTxt:"Ir a Colaboradores"
+  }
+};
+function abrirGuia(clave){
+  const g=GUIAS[clave]; if(!g)return;
+  const pasos=g.pasos.map((p,i)=>`<li><span class="guia-num">${i+1}</span><span class="guia-txt">${p}</span></li>`).join("");
+  const cuerpo=`
+    <div class="guia-base"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>${g.base}</div>
+    <p class="guia-intro">${g.intro}</p>
+    <ol class="guia-pasos">${pasos}</ol>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cerrar</button>
+      ${g.ir?`<button class="btn btn-primary" onclick="cerrarModal();switchView('${g.ir}')">${g.irTxt||"Ir ahora"}</button>`:""}
+    </div>`;
+  document.getElementById("modalHost").innerHTML=modalShell(g.titulo,cuerpo,560);
+}
+
+function panelAlertas(){
+  const alertas=[];
+  // Contratos sin firmar
+  const sinContrato=empleados.filter(e=>!e.contrato);
+  if(sinContrato.length) alertas.push({tipo:"warn",icon:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+    t:`${sinContrato.length} contrato(s) por registrar`, d:`Falta el contrato escrito de: ${sinContrato.map(e=>e.nombre).join(", ")}.`, law:"Art. 67 C.T.", guia:"contrato"});
+  // Vacaciones vencidas (>=30 días acumulados)
+  const vac=empleados.filter(e=>vacaciones(e).pendientes>=30);
+  if(vac.length) alertas.push({tipo:"bad",icon:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>',
+    t:`${vac.length} colaborador(es) con vacaciones acumuladas`, d:`Conviene programar el descanso de: ${vac.map(e=>e.nombre).join(", ")}.`, law:"Art. 54 C.T.", guia:"vacaciones_vencidas"});
+  // Solicitudes pendientes
+  const pend=solicitudesVac.filter(s=>s.estado==="pendiente");
+  if(pend.length) alertas.push({tipo:"info",icon:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+    t:`${pend.length} solicitud(es) de vacaciones por resolver`, d:"Hay solicitudes esperando aprobación o rechazo.", guia:"solicitudes"});
+  // Obligación recurrente CSS
+  alertas.push({tipo:"info",icon:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+    t:"Declaración a la CSS vía SIPE", d:"Recuerda declarar y pagar entre los días 15 y 22 del mes.", law:"Ley 51 de 2005", guia:"sipe"});
+
+  if(!alertas.length) return "";
+  const items=alertas.map(a=>`<div class="alert-item ${a.tipo}">
+    <span class="alert-ic"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">${a.icon}</svg></span>
+    <span class="alert-body"><span class="alert-t">${a.t}</span><span class="alert-d">${a.d}${a.law?` · <b style="color:var(--blue)">${a.law}</b>`:""}</span></span>
+    <button class="btn btn-primary btn-sm alert-fix" onclick="abrirGuia('${a.guia}')" aria-label="Cómo solucionar: ${a.t}"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l6-6a4 4 0 0 0 5.4-5.4l-2.5 2.5-2-2z"/></svg>Solucionar</button>
+  </div>`).join("");
+  return `<div class="card"><div class="card-h"><h3>Alertas y pendientes</h3><span class="hint">${alertas.length} punto(s) que requieren atención</span></div>
+    <div class="card-b" style="padding:12px"><div class="alert-list">${items}</div></div><div id="modalHost"></div></div>`;
+}
+
+let filtroEmp="";
+V.empleados = ()=>{
+  const q=filtroEmp.toLowerCase();
+  const lista=empleados.filter(e=>!q||e.nombre.toLowerCase().includes(q)||e.cargo.toLowerCase().includes(q)||e.cedula.includes(q));
+  const rows=lista.map(e=>{const c=calc(e);
+    return `<tr>
+      <td><div class="emp-cell"><div class="emp-ava">${initials(e.nombre)}</div><div><div class="emp-name">${e.nombre}</div><div class="emp-role">${e.cargo}</div></div></div></td>
+      <td class="mini">${e.cedula}</td>
+      <td class="mini">${antiguedad(e.ingreso).toFixed(1)} años</td>
+      <td><span class="tag ${e.contrato?'ok':'warn'}">${e.contrato?'Con contrato':'Pendiente'}</span></td>
+      <td class="num">${fmt(e.salario)}</td>
+      <td class="num" style="color:var(--green)">${fmt(c.neto)}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn-icon" onclick="abrirEditar(${e.id})" title="Editar" aria-label="Editar a ${e.nombre}"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+        <button class="btn-icon" onclick="verColilla(${e.id})" title="Recibo" aria-label="Ver recibo de ${e.nombre}"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/></svg></button>
+        <button class="btn-icon danger" onclick="abrirTerminacion(${e.id})" title="Terminar contrato" aria-label="Terminar contrato de ${e.nombre}"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg></button>
+      </td></tr>`;}).join("");
+  const vacio=`<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray)">Sin resultados para "${filtroEmp}".</td></tr>`;
+  return `<div class="card"><div class="card-h"><h3>Colaboradores en planilla</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div class="search-box"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="empSearch" placeholder="Buscar por nombre, cargo o cédula" value="${filtroEmp}" oninput="filtrarEmp(this.value)" aria-label="Buscar colaborador"></div>
+      <button class="btn btn-ghost btn-sm no-print" onclick="exportarColaboradoresCSV()" aria-label="Exportar colaboradores a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="switchView('alta')"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Registrar</button>
+    </div></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr><th scope="col">Empleado</th><th scope="col">Cédula</th><th scope="col">Antigüedad</th><th scope="col">Contrato</th><th scope="col" style="text-align:right">Salario base</th><th scope="col" style="text-align:right">Salario neto</th><th scope="col" style="text-align:right">Acciones</th></tr></thead>
+    <tbody>${rows||vacio}</tbody></table></div></div></div>
+    <div id="modalHost"></div>`;
+};
+function filtrarEmp(v){
+  filtroEmp=v;
+  // re-render preservando el foco del buscador
+  const cont=document.getElementById("content");
+  cont.innerHTML=V.empleados();
+  const inp=document.getElementById("empSearch");
+  if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length); }
+}
+
+V.alta = ()=>{
+  return `<div class="wizard">
+    <div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      <div>Registra un colaborador en tres pasos. El sistema calcula automáticamente sus deducciones y salario neto según la ley panameña.</div></div>
+    <div class="steps">
+      <div class="step ${wizardStep>=1?'active':''} ${wizardStep>1?'done':''}"><div class="circle">${wizardStep>1?'✓':'1'}</div>Datos personales</div>
+      <div class="step ${wizardStep>=2?'active':''} ${wizardStep>2?'done':''}"><div class="circle">${wizardStep>2?'✓':'2'}</div>Salario</div>
+      <div class="step ${wizardStep>=3?'active':''}"><div class="circle">3</div>Confirmación</div>
+    </div>
+    <div class="card"><div class="card-b">
+      <div class="wizard-pane ${wizardStep===1?'active':''}">
+        <div class="grid2">
+          <div class="field"><label>Nombre completo *</label><input id="wNombre" value="${wizardData.nombre||''}" placeholder="Ej. Pedro Núñez"></div>
+          <div class="field"><label>Cédula</label><input id="wCedula" value="${wizardData.cedula||''}" placeholder="Ej. 8-888-1234"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Cargo</label><input id="wCargo" value="${wizardData.cargo||''}" placeholder="Ej. Analista"></div>
+          <div class="field"><label>Fecha de ingreso</label><input id="wIngreso" type="date" value="${wizardData.ingreso||'2026-07-01'}"></div>
+        </div>
+        <button class="btn btn-primary" onclick="wizardNext(1)">Continuar →</button>
+      </div>
+      <div class="wizard-pane ${wizardStep===2?'active':''}">
+        <div class="grid2">
+          <div class="field"><label>Salario base mensual (B/.) *</label><input id="wSalario" type="number" value="${wizardData.salario||''}" placeholder="Ej. 1200" oninput="livePreview()"></div>
+          <div class="field"><label>Bonificaciones / comisiones (B/.)</label><input id="wBono" type="number" value="${wizardData.bono||0}" oninput="livePreview()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Horas extras (B/.)</label><input id="wExtras" type="number" value="${wizardData.extras||0}" oninput="livePreview()"></div>
+          <div class="field"><label>Otros descuentos autorizados (B/.)</label><input id="wOtros" type="number" value="${wizardData.otros||0}" oninput="livePreview()"></div>
+        </div>
+        <div class="preview-box" id="livePrev"></div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-ghost" onclick="wizardBack(1)">← Atrás</button>
+          <button class="btn btn-primary" onclick="wizardNext(2)">Continuar →</button></div>
+      </div>
+      <div class="wizard-pane ${wizardStep===3?'active':''}" id="wizardConfirm"></div>
+    </div></div></div>`;
+};
+
+V.planilla = ()=>{
+  const rows=empleados.map(e=>{const c=calc(e);
+    return `<tr><td><div class="emp-cell"><div class="emp-ava">${initials(e.nombre)}</div><div><div class="emp-name">${e.nombre}</div><div class="emp-role">${e.cargo}</div></div></div></td>
+      <td class="num">${fmt(c.bruto)}</td><td class="num" style="color:var(--red)">${fmt(c.css)}</td>
+      <td class="num" style="color:var(--red)">${fmt(c.se)}</td><td class="num" style="color:var(--red)">${c.isr>0?fmt(c.isr):"—"}</td>
+      <td class="num" style="color:var(--green);font-weight:700">${fmt(c.neto)}</td></tr>`;}).join("");
+  const t=totales();
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div>Cálculos con tasas vigentes en Panamá (2026): <b>CSS 9.75%</b>, <b>Seguro Educativo 1.25%</b> e <b>ISR</b> según la escala anual. El costo patronal suma CSS 13.25%, S. Educativo 1.50% y Riesgos Profesionales ${empresa.riesgoCIIU}%.</div></div>
+    <div class="card"><div class="card-h"><h3>Planilla del período — ${periodoActual}</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="exportarPlanillaCSV()" aria-label="Exportar planilla a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarPeriodo()" aria-label="Cerrar período y archivar"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M9 16l2 2 4-4"/></svg>Cerrar período</button>
+        <button class="btn btn-ghost btn-sm" onclick="switchView('reportes')">Ver reportes</button>
+      </div></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr><th scope="col">Empleado</th><th scope="col" style="text-align:right">Bruto</th><th scope="col" style="text-align:right">CSS 9.75%</th><th scope="col" style="text-align:right">S.Educ 1.25%</th><th scope="col" style="text-align:right">ISR</th><th scope="col" style="text-align:right">Neto</th></tr></thead>
+    <tbody>${rows}</tbody></table></div></div></div>
+    <div class="totals-bar">
+      <div class="t"><div class="l">Total bruto</div><div class="v">${fmt0(t.bruto)}</div></div>
+      <div class="t"><div class="l">Total CSS</div><div class="v">${fmt0(t.css)}</div></div>
+      <div class="t"><div class="l">Total S. Educativo</div><div class="v">${fmt0(t.se)}</div></div>
+      <div class="t"><div class="l">Total ISR</div><div class="v">${fmt0(t.isr)}</div></div>
+      <div class="t"><div class="l">Neto a pagar</div><div class="v" style="color:var(--lblue)">${fmt0(t.neto)}</div></div></div>`;
+};
+
+V.colilla = ()=>{
+  const opts=empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join("");
+  return `<div class="select-emp field"><label for="slipSelect">Selecciona un colaborador para ver su comprobante de pago</label>
+    <select id="slipSelect" onchange="renderSlip()">${opts}</select></div>
+    <div style="max-width:560px;margin:0 auto 14px;display:flex;gap:8px;justify-content:flex-end" class="no-print">
+      <button class="btn btn-ghost btn-sm" onclick="imprimirElemento('#slipContainer .slip')" aria-label="Descargar recibo en PDF"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Descargar PDF</button>
+    </div>
+    <div id="slipContainer"></div>`;
+};
+
+V.reportes = ()=>{
+  const t=totales();
+  const bars=[{l:"CSS trab.",v:t.css,c:"#2E75B6"},{l:"CSS patr.",v:t.cssPat,c:"#1F4E79"},
+    {l:"S.Ed trab.",v:t.se,c:"#BF8F00"},{l:"S.Ed patr.",v:t.sePat,c:"#8A6A00"},
+    {l:"Riesgos",v:t.riesgo,c:"#548235"},{l:"ISR",v:t.isr,c:"#C0504D"}];
+  const d=donutSVG("d2","dl2",[{label:"Salarios netos",val:t.neto,color:"#2E75B6"},
+    {label:"Aporte trabajador",val:t.dedLey,color:"#BF8F00"},{label:"Aporte patronal",val:t.cargaPat,color:"#548235"}]);
+  const rows=[["Seguro Social (CSS)",t.css,t.cssPat],["Seguro Educativo",t.se,t.sePat],
+    ["Riesgos Profesionales",0,t.riesgo],["Impuesto sobre la renta",t.isr,0]];
+  const sipe=rows.map(r=>`<tr><td><b>${r[0]}</b></td><td class="num">${r[1]>0?fmt(r[1]):"—"}</td><td class="num">${r[2]>0?fmt(r[2]):"—"}</td><td class="num" style="color:var(--navy)">${fmt(r[1]+r[2])}</td></tr>`).join("")
+    +`<tr style="background:var(--pale)"><td><b>Total a declarar</b></td><td class="num"><b>${fmt(t.css+t.se+t.isr)}</b></td><td class="num"><b>${fmt(t.cargaPat)}</b></td><td class="num" style="color:var(--navy)"><b>${fmt(t.css+t.se+t.isr+t.cargaPat)}</b></td></tr>`;
+  return `<div class="kpi-grid">
+    <div class="kpi"><div class="label">Total planilla bruta</div><div class="value">${fmt0(t.bruto)}</div><div class="meta">Suma de salarios del período</div></div>
+    <div class="kpi gold"><div class="label">Aporte del trabajador</div><div class="value">${fmt0(t.dedLey)}</div><div class="meta">Deducciones de ley</div></div>
+    <div class="kpi rd"><div class="label">Aporte patronal</div><div class="value">${fmt0(t.cargaPat)}</div><div class="meta">Cargas de la empresa</div></div>
+    <div class="kpi g"><div class="label">Provisión décimo tercer mes</div><div class="value">${fmt0(t.decimo)}</div><div class="meta">Acumulado mensual (1/12)</div></div></div>
+  <div class="row">
+    <div class="card"><div class="card-h"><h3>Desglose de aportes a la CSS</h3><span class="hint">Trabajador vs. empleador</span></div>
+      <div class="card-b"><div class="bars">${barsHTML(bars)}</div></div></div>
+    <div class="card"><div class="card-h"><h3>Composición del costo laboral</h3></div>
+      <div class="card-b"><div class="donut-wrap">${d.svg}<ul class="legend">${d.legend}</ul></div></div></div></div>
+  <div class="card"><div class="card-h"><h3>Resumen para declaración SIPE</h3>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="hint">Sistema de Ingresos y Prestaciones Económicas — CSS</span>
+    <button class="btn btn-ghost btn-sm no-print" onclick="exportarSipeCSV()" aria-label="Exportar resumen SIPE a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button></div></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr><th scope="col">Concepto</th><th scope="col" style="text-align:right">Trabajador</th><th scope="col" style="text-align:right">Empleador</th><th scope="col" style="text-align:right">Total</th></tr></thead>
+    <tbody>${sipe}</tbody></table></div></div></div>
+  <div class="card"><div class="card-h"><h3>Provisión del décimo tercer mes</h3><span class="hint">Art. 145 · tres partidas al año</span></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr><th scope="col">Partida</th><th scope="col">Fecha de pago</th><th scope="col" style="text-align:right">Provisión mensual</th><th scope="col" style="text-align:right">Monto de la partida</th></tr></thead>
+    <tbody>
+      <tr><td><b>Primera partida</b></td><td>15 de abril</td><td class="num">${fmt(t.decimo)}</td><td class="num" style="color:var(--navy)">${fmt(t.decimo*4)}</td></tr>
+      <tr><td><b>Segunda partida</b></td><td>15 de agosto</td><td class="num">${fmt(t.decimo)}</td><td class="num" style="color:var(--navy)">${fmt(t.decimo*4)}</td></tr>
+      <tr><td><b>Tercera partida</b></td><td>15 de diciembre</td><td class="num">${fmt(t.decimo)}</td><td class="num" style="color:var(--navy)">${fmt(t.decimo*4)}</td></tr>
+      <tr style="background:var(--pale)"><td colspan="3"><b>Décimo anual del equipo (un mes de salario)</b></td><td class="num" style="color:var(--navy)"><b>${fmt(t.decimo*12)}</b></td></tr>
+    </tbody></table></div></div></div>`;
+};
+function exportarSipeCSV(){
+  const t=totales();
+  const filas=[["Concepto","Trabajador","Empleador","Total"],
+    ["Seguro Social (CSS)",t.css.toFixed(2),t.cssPat.toFixed(2),(t.css+t.cssPat).toFixed(2)],
+    ["Seguro Educativo",t.se.toFixed(2),t.sePat.toFixed(2),(t.se+t.sePat).toFixed(2)],
+    ["Riesgos Profesionales","0.00",t.riesgo.toFixed(2),t.riesgo.toFixed(2)],
+    ["Impuesto sobre la renta",t.isr.toFixed(2),"0.00",t.isr.toFixed(2)],
+    ["TOTAL",(t.css+t.se+t.isr).toFixed(2),t.cargaPat.toFixed(2),(t.css+t.se+t.isr+t.cargaPat).toFixed(2)]];
+  descargarCSV("Resumen_SIPE_Julio2026.csv",filas);
+}
+
+/* ===== CUMPLIMIENTO DE REGULACIONES ===== */
+V.cumplimiento = ()=>{
+  const t=totales();
+  // Evaluación dinámica según los datos reales del sistema
+  const sinContrato=empleados.filter(e=>!e.contrato).length;
+  const vacVencidas=empleados.filter(e=>vacaciones(e).pendientes>=30).length;
+  const obs=[
+    {est:"ok",  t:"Afiliación a la Caja de Seguro Social", d:"Todos los colaboradores están inscritos y con cuotas al día.", law:"Ley 51 de 2005"},
+    {est:"ok",  t:"Retención de deducciones de ley", d:"CSS, Seguro Educativo e ISR se calculan y retienen correctamente.", law:"Código Fiscal · Ley 51"},
+    {est:"ok",  t:"Provisión del décimo tercer mes", d:`Se acumula ${fmt0(t.decimo)} mensual para las tres partidas del año.`, law:"Art. 145 Código de Trabajo", guia:"decimo"},
+    {est:"ok",  t:"Pago del salario mínimo vigente", d:"Ningún salario está por debajo del mínimo del Decreto 13 de 2026.", law:"Decreto Ejecutivo 13 de 2026", guia:"salario_minimo"},
+    {est: sinContrato>0?"warn":"ok", t:"Contratos de trabajo por escrito",
+      d: sinContrato>0?`${sinContrato} colaborador(es) aún no tienen el contrato escrito registrado en el sistema.`:"Todos los colaboradores tienen su contrato registrado.",
+      law:"Art. 67-82 Código de Trabajo", guia:"contrato"},
+    {est: vacVencidas>0?"warn":"ok", t:"Programación de vacaciones",
+      d: vacVencidas>0?`${vacVencidas} colaborador(es) acumulan 30 días o más de vacaciones por gozar.`:"Ningún colaborador supera el límite de vacaciones acumuladas.",
+      law:"Art. 52-54 Código de Trabajo", guia:"vacaciones_vencidas"},
+    {est:"pend", t:"Declaración mensual a la CSS (SIPE)", d:"Obligación recurrente: declarar y pagar entre los días 15 y 22 del mes.", law:"Ley 51 de 2005", guia:"sipe"},
+  ];
+  const okCount=obs.filter(o=>o.est==="ok").length;
+  const pct=Math.round(okCount/obs.length*100);
+  const ring=`<svg width="150" height="150" viewBox="0 0 42 42" role="img" aria-label="Índice de cumplimiento ${pct} por ciento">
+    <circle cx="21" cy="21" r="15.9" fill="none" stroke="#EEF2F7" stroke-width="5"/>
+    <circle cx="21" cy="21" r="15.9" fill="none" stroke="#2E7D32" stroke-width="5" stroke-linecap="round"
+      stroke-dasharray="${pct} ${100-pct}" stroke-dashoffset="25" style="transition:stroke-dasharray 1.1s ease"/></svg>`;
+  const items=obs.map(o=>{
+    const ic=o.est==="ok"?"ok":o.est==="warn"?"warn":"bad";
+    const icon=o.est==="ok"?'<path d="M20 6L9 17l-5-5"/>':'<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>';
+    const estadoTag=o.est==="ok"?`<span class="tag ok">Cumple</span>`:o.est==="pend"?`<span class="tag pend">Recurrente</span>`:`<span class="tag warn">Atención</span>`;
+    const btn=(o.est!=="ok"&&o.guia)?`<button class="btn btn-primary btn-sm comp-fix" onclick="abrirGuia('${o.guia}')" aria-label="Cómo solucionar: ${o.t}"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l6-6a4 4 0 0 0 5.4-5.4l-2.5 2.5-2-2z"/></svg>Solucionar</button>`:"";
+    return `<div class="comp-item"><div class="comp-ic ${ic}"><svg class="ic" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">${icon}</svg></div>
+      <div class="comp-txt"><div class="t">${o.t}</div><div class="d">${o.d}</div><div class="law">${o.law}</div></div>
+      <div class="comp-actions">${estadoTag}${btn}</div></div>`;}).join("");
+  const cal=[
+    ["15 de abril","Primera partida del décimo tercer mes","Art. 145 C.T.","info"],
+    ["15 de agosto","Segunda partida del décimo tercer mes","Art. 145 C.T.","info"],
+    ["15 de diciembre","Tercera partida del décimo tercer mes","Art. 145 C.T.","info"],
+    ["Días 15-22 de cada mes","Declaración y pago a la CSS vía SIPE","Ley 51 de 2005","pend"],
+    ["15 de cada mes","Retención de ISR a la DGI","Código Fiscal","pend"],
+    ["Al cumplir 11 meses","Derecho a 30 días de vacaciones","Art. 52 C.T.","ok"],
+    ["Al terminar contrato","Prima de antigüedad y liquidación","Art. 224 C.T.","ok"],
+  ];
+  return `<div class="card"><div class="card-h"><h3>Índice de cumplimiento laboral</h3><span class="hint">Evaluación automática de obligaciones</span></div>
+    <div class="card-b"><div class="comp-hero">
+      <div class="ring-wrap">${ring}<div class="pct"><div class="n">${pct}%</div><div class="l">al día</div></div></div>
+      <div class="comp-list">${items}</div>
+    </div></div></div>
+  <div class="card"><div class="card-h"><h3>Calendario de obligaciones laborales</h3><span class="hint">Fechas y base legal en Panamá</span></div>
+    <div class="card-b" style="padding:0"><table><thead><tr><th>Cuándo</th><th>Obligación</th><th>Base legal</th><th>Estado</th></tr></thead>
+    <tbody>${cal.map(c=>`<tr><td><b>${c[0]}</b></td><td>${c[1]}</td><td class="mini" style="color:var(--blue);font-weight:600">${c[2]}</td><td><span class="tag ${c[3]}">${c[3]==="ok"?"Vigente":c[3]==="pend"?"Recurrente":"Programado"}</span></td></tr>`).join("")}</tbody></table></div></div>
+  <div id="modalHost"></div>`;
+};
+
+/* ===== ANÁLISIS DE LEYES ===== */
+V.leyes = ()=>{
+  const t=totales();
+  const leyes=[
+    {b:"Art. 145 Código de Trabajo", h:"Décimo tercer mes", p:"Equivale a un mes de salario, pagado en tres partidas: 15 de abril, 15 de agosto y 15 de diciembre.", c:`El sistema provisiona <b>${fmt0(t.decimo)}</b> cada mes (salario ÷ 12) para cubrir las tres partidas sin descuadres.`},
+    {b:"Art. 52-54 Código de Trabajo", h:"Vacaciones", p:"30 días de descanso remunerado por cada 11 meses continuos de trabajo. Es un derecho irrenunciable.", c:"Se acumula <b>1 mes de salario</b> por cada 11 meses trabajados, calculado sobre el salario promedio."},
+    {b:"Art. 224 Código de Trabajo", h:"Prima de antigüedad", p:"Se paga siempre al terminar la relación, sin importar el motivo. Base: promedio de los últimos 11 meses.", c:"Equivale a <b>una semana de salario</b> por cada año trabajado, provisionada desde el primer día."},
+    {b:"Ley 51 de 2005", h:"Seguro Social (CSS)", p:"Obligatorio desde el primer día. El trabajador aporta 9.75% y el empleador 13.25% sobre el salario.", c:`Este período el sistema retiene <b>${fmt0(t.css)}</b> del trabajador y aporta <b>${fmt0(t.cssPat)}</b> como patrono.`},
+    {b:"Código Fiscal Art. 700", h:"Impuesto sobre la renta", p:"Exento hasta B/.11,000 anuales; 15% entre B/.11,001 y B/.50,000; 25% sobre el excedente.", c:`Se calcula sobre el salario anualizado incluyendo el décimo. Retención del período: <b>${fmt0(t.isr)}</b>.`},
+    {b:"Art. 67-82 Código de Trabajo", h:"Contrato de trabajo", p:"Toda relación laboral debe formalizarse por escrito, en dos ejemplares, uno para cada parte.", c:"El sistema alerta cuando un colaborador no tiene su contrato escrito cargado y registrado."},
+    {b:"Art. 213-225 Código de Trabajo", h:"Liquidación y despido", p:"El despido justificado (Art. 213) no paga indemnización; el injustificado sí, de forma progresiva.", c:"La liquidación reúne vacaciones y décimo proporcional, prima de antigüedad y, si aplica, indemnización."},
+  ];
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    <div>PlanillaDigital traduce cada obligación del Código de Trabajo de Panamá en un cálculo automático. Toca una tarjeta para ver cómo el sistema la resuelve.</div></div>
+    <div class="law-grid">${leyes.map(l=>`<div class="law-card"><span class="law-badge">${l.b}</span><h4>${l.h}</h4><p>${l.p}</p><div class="calc">⚙️ ${l.c}</div></div>`).join("")}</div>`;
+};
+
+/* ===== DATOS DE LA EMPRESA ===== */
+V.empresa = ()=>{
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+    <div>Los datos de la empresa se reflejan en los comprobantes de pago, los reportes y el cálculo del riesgo profesional.</div></div>
+  <div class="card" style="max-width:760px"><div class="card-h"><h3>Información del negocio</h3></div><div class="card-b">
+    <div class="grid2">
+      <div class="field"><label>Nombre o razón social</label><input id="cNombre" value="${empresa.nombre}"></div>
+      <div class="field"><label>RUC</label><input id="cRuc" value="${empresa.ruc}"></div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>Dígito verificador (DV)</label><input id="cDv" value="${empresa.dv}"></div>
+      <div class="field"><label>Actividad económica</label><input id="cAct" value="${empresa.actividad}"></div>
+      <div class="field"><label>Riesgo profesional (CIIU %)</label><input id="cRiesgo" type="number" step="0.01" value="${empresa.riesgoCIIU}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Dirección</label><input id="cDir" value="${empresa.direccion}"></div>
+      <div class="field"><label>Correo de contacto</label><input id="cMail" value="${empresa.correo}"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveEmpresa()">Guardar cambios</button>
+    <span id="empSaved" style="margin-left:14px;color:var(--green);font-weight:600;font-size:13px;display:none">✓ Datos actualizados</span>
+  </div></div>
+  <div class="card" style="max-width:760px"><div class="card-h"><h3>Funciones del sistema</h3><span class="hint">Versión completa · todo incluido</span></div>
+    <div class="card-b" style="padding:0"><table><tbody>
+      <tr><td>Cálculo de planilla y deducciones</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
+      <tr><td>Recibos de pago y liquidaciones en PDF</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
+      <tr><td>Control de vacaciones y solicitudes</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
+      <tr><td>Expediente y amonestaciones</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
+      <tr><td>Cumplimiento, calendario legal y análisis de leyes</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
+      <tr><td>Reportes, resumen SIPE e historial de períodos</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
+      <tr><td>Exportación de datos a CSV</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
+    </tbody></table></div></div>
+  <div class="card" style="max-width:760px"><div class="card-h"><h3>Gestión de datos</h3><span class="hint">Almacenamiento en este dispositivo</span></div>
+    <div class="card-b">
+      <p style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:14px">${dbDisponible?"Los cambios se guardan automáticamente en este navegador. La información permanece disponible al volver a abrir la aplicación, sin enviarse a ningún servidor externo.":"El navegador no permite el guardado automático en este momento. Los cambios se mantendrán solo durante esta sesión."}</p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="tag ${dbDisponible?'ok':'warn'}">${dbDisponible?'Guardado automático activo':'Solo en memoria'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="reiniciarDatos()" style="color:var(--red)" aria-label="Reiniciar todos los datos"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Reiniciar datos</button>
+      </div>
+    </div></div>`;
+};
+
+/* ===== CONTROL DE VACACIONES (Art. 52-54 C.T.) ===== */
+V.vacaciones = ()=>{
+  let totCausados=0,totPend=0,totValor=0;
+  const rows=empleados.map(e=>{
+    const v=vacaciones(e);
+    totCausados+=v.causados; totPend+=v.pendientes; totValor+=v.valorPendiente;
+    const estado=v.pendientes>=30?"warn":v.pendientes>0?"pend":"ok";
+    const txt=v.pendientes>=30?"Vencidas":v.pendientes>0?"Acumulando":"Al día";
+    return `<tr>
+      <td><div class="emp-cell"><div class="emp-ava">${initials(e.nombre)}</div><div><div class="emp-name">${e.nombre}</div><div class="emp-role">${e.cargo}</div></div></div></td>
+      <td class="num">${antiguedad(e.ingreso).toFixed(1)} años</td>
+      <td class="num">${v.causados}</td>
+      <td class="num">${v.gozados}</td>
+      <td class="num" style="font-weight:700;color:${v.pendientes>=30?'var(--red)':'var(--navy)'}">${v.pendientes}</td>
+      <td class="num" style="color:var(--green)">${fmt(v.valorPendiente)}</td>
+      <td><span class="tag ${estado}">${txt}</span></td></tr>`;}).join("");
+
+  // Solicitudes de vacaciones
+  const pend=solicitudesVac.filter(s=>s.estado==="pendiente");
+  const otras=solicitudesVac.filter(s=>s.estado!=="pendiente");
+  const solRow=s=>{const e=empById(s.empId); if(!e)return"";
+    const acc=s.estado==="pendiente"
+      ? `<button class="btn-icon ok-ic" onclick="resolverSolicitud(${s.id},'aprobada')" title="Aprobar" aria-label="Aprobar solicitud de ${e.nombre}"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
+         <button class="btn-icon danger" onclick="resolverSolicitud(${s.id},'rechazada')" title="Rechazar" aria-label="Rechazar solicitud de ${e.nombre}"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`
+      : `<span class="tag ${s.estado==='aprobada'?'ok':'warn'}">${s.estado==='aprobada'?'Aprobada':'Rechazada'}</span>`;
+    return `<tr>
+      <td><div class="emp-name">${e.nombre}</div><div class="mini">${e.cargo}</div></td>
+      <td>${fmtFecha(s.inicio)} → ${fmtFecha(s.fin)}</td>
+      <td class="num">${s.dias}</td>
+      <td class="mini">${s.motivo||"—"}</td>
+      <td style="text-align:right;white-space:nowrap">${acc}</td></tr>`;};
+  const solicitudesTabla=(pend.concat(otras)).map(solRow).join("")
+    || `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray)">No hay solicitudes registradas.</td></tr>`;
+
+  // Calendario visual del mes en curso (julio 2026)
+  const cal=calendarioVacaciones(2026,6);
+
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    <div>El Código de Trabajo reconoce <b>30 días de vacaciones por cada 11 meses continuos</b> de trabajo. Las solicitudes aprobadas descuentan automáticamente el saldo de días del colaborador. Es un derecho irrenunciable.</div></div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="label">Solicitudes pendientes</div><div class="value">${pend.length}</div><div class="meta">Esperan aprobación</div></div>
+    <div class="kpi gold"><div class="label">Días pendientes (equipo)</div><div class="value">${totPend}</div><div class="meta">Saldo por gozar o pagar</div></div>
+    <div class="kpi rd"><div class="label">Pasivo por vacaciones</div><div class="value">${fmt0(totValor)}</div><div class="meta">Provisión estimada</div></div>
+  </div>
+
+  <div class="card"><div class="card-h"><h3>Solicitudes de vacaciones</h3>
+    <button class="btn btn-primary btn-sm" onclick="abrirSolicitud()"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva solicitud</button></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr>
+      <th scope="col">Colaborador</th><th scope="col">Período solicitado</th><th scope="col" style="text-align:right">Días</th><th scope="col">Motivo</th><th scope="col" style="text-align:right">Acción</th>
+    </tr></thead><tbody>${solicitudesTabla}</tbody></table></div></div></div>
+
+  <div class="card"><div class="card-h"><h3>Calendario de vacaciones — ${periodoActual}</h3><span class="hint">Días con vacaciones aprobadas</span></div>
+    <div class="card-b">${cal}</div></div>
+
+  <div class="card"><div class="card-h"><h3>Saldo de vacaciones por colaborador</h3>
+    <button class="btn btn-ghost btn-sm no-print" onclick="exportarVacacionesCSV()" aria-label="Exportar vacaciones a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr>
+      <th scope="col">Colaborador</th><th scope="col" style="text-align:right">Antigüedad</th><th scope="col" style="text-align:right">Causados</th><th scope="col" style="text-align:right">Gozados</th><th scope="col" style="text-align:right">Pendientes</th><th scope="col" style="text-align:right">Valor pendiente</th><th scope="col">Estado</th>
+    </tr></thead><tbody>${rows}</tbody></table></div></div></div>
+    <div id="modalHost"></div>`;
+};
+
+// Genera la grilla del calendario marcando días con vacaciones aprobadas
+function calendarioVacaciones(año,mes){
+  const primero=new Date(año,mes,1), dias=new Date(año,mes+1,0).getDate();
+  const offset=(primero.getDay()+6)%7; // lunes=0
+  // Mapa día→lista de nombres con vacaciones aprobadas ese día
+  const ocupados={};
+  solicitudesVac.filter(s=>s.estado==="aprobada").forEach(s=>{
+    const e=empById(s.empId); if(!e)return;
+    let d=new Date(s.inicio), f=new Date(s.fin);
+    while(d<=f){ if(d.getFullYear()===año&&d.getMonth()===mes){ const k=d.getDate(); (ocupados[k]=ocupados[k]||[]).push(e.nombre); } d.setDate(d.getDate()+1); }
+  });
+  const dow=["L","M","X","J","V","S","D"].map(x=>`<div class="cal-dow">${x}</div>`).join("");
+  let celdas="";
+  for(let i=0;i<offset;i++) celdas+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=dias;d++){
+    const gente=ocupados[d];
+    const activo=gente?`class="cal-cell on" title="${gente.join(', ')}"`:`class="cal-cell"`;
+    celdas+=`<div ${activo}><span class="cal-num">${d}</span>${gente?`<span class="cal-dot">${gente.length}</span>`:""}</div>`;
+  }
+  return `<div class="cal-grid">${dow}${celdas}</div>
+    <div class="mini" style="margin-top:10px;display:flex;align-items:center;gap:8px"><span class="cal-legend-dot"></span>Día con al menos un colaborador de vacaciones aprobadas.</div>`;
+}
+
+/* ===== SOLICITUDES DE VACACIONES ===== */
+function abrirSolicitud(){
+  if(!empleados.length){ alert("No hay colaboradores para solicitar vacaciones."); return; }
+  const opts=empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join("");
+  const cuerpo=`
+    <div class="field"><label for="solEmp">Colaborador</label><select id="solEmp" onchange="calcSolDias()">${opts}</select></div>
+    <div class="grid2">
+      <div class="field"><label for="solInicio">Fecha de inicio</label><input id="solInicio" type="date" value="2026-08-01" onchange="calcSolDias()"></div>
+      <div class="field"><label for="solFin">Fecha de fin</label><input id="solFin" type="date" value="2026-08-05" onchange="calcSolDias()"></div>
+    </div>
+    <div class="field"><label for="solMotivo">Motivo (opcional)</label><input id="solMotivo" placeholder="Ej. Descanso anual"></div>
+    <div class="preview-box" id="solPreview"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarSolicitud()">Registrar solicitud</button>
+    </div>`;
+  document.getElementById("modalHost").innerHTML=modalShell("Nueva solicitud de vacaciones",cuerpo,540);
+  calcSolDias();
+}
+function calcSolDias(){
+  const box=document.getElementById("solPreview"); if(!box)return;
+  const e=empById(+document.getElementById("solEmp").value);
+  const ini=document.getElementById("solInicio").value, fin=document.getElementById("solFin").value;
+  const dias=diasEntre(ini,fin);
+  const v=e?vacaciones(e):null;
+  const excede=v&&dias>v.pendientes;
+  box.innerHTML=`<div class="pr-row"><span>Días solicitados</span><span class="v">${dias}</span></div>
+    ${v?`<div class="pr-row"><span>Saldo disponible</span><span class="v">${v.pendientes} días</span></div>`:""}
+    ${excede?`<div class="mini" style="color:var(--red);margin-top:6px">La solicitud excede el saldo disponible. Se puede registrar, pero conviene revisarla.</div>`:""}`;
+}
+function guardarSolicitud(){
+  const empId=+document.getElementById("solEmp").value;
+  const inicio=document.getElementById("solInicio").value, fin=document.getElementById("solFin").value;
+  const dias=diasEntre(inicio,fin);
+  if(!inicio||!fin||dias<=0){ alert("Revisa las fechas: el fin debe ser igual o posterior al inicio."); return; }
+  solicitudesVac.push({id:nextSolId++, empId, inicio, fin, dias, estado:"pendiente", motivo:document.getElementById("solMotivo").value.trim()});
+  guardar(); cerrarModal(); anunciar("Solicitud registrada"); switchView("vacaciones");
+}
+function resolverSolicitud(id,estado){
+  const s=solicitudesVac.find(x=>x.id===id); if(!s)return;
+  s.estado=estado;
+  guardar(); anunciar("Solicitud "+estado); switchView("vacaciones");
+}
+
+/* ===== LIQUIDACIONES (Art. 224 y conexos) ===== */
+V.liquidacion = ()=>{
+  // Histórico de liquidaciones ya ejecutadas
+  let hist="";
+  if(liquidaciones.length){
+    const filas=liquidaciones.map(x=>`<tr>
+      <td><div class="emp-name">${x.nombre}</div><div class="mini">${x.cargo} · ${x.cedula}</div></td>
+      <td>${fmtFecha(x.fecha)}</td>
+      <td><span class="tag ${x.motivo==='injustificado'?'warn':'info'}">${x.motivoTxt}</span></td>
+      <td class="num">${x.años.toFixed(1)} años</td>
+      <td class="num" style="color:var(--navy);font-weight:700">${fmt(x.total)}</td></tr>`).join("");
+    hist=`<div class="card"><div class="card-h"><h3>Liquidaciones ejecutadas</h3>
+      <button class="btn btn-ghost btn-sm no-print" onclick="exportarLiquidacionesCSV()" aria-label="Exportar liquidaciones a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button></div>
+      <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr>
+        <th scope="col">Colaborador</th><th scope="col">Fecha</th><th scope="col">Causa</th><th scope="col" style="text-align:right">Antigüedad</th><th scope="col" style="text-align:right">Total pagado</th>
+      </tr></thead><tbody>${filas}</tbody></table></div></div></div>`;
+  }
+  const opts=empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join("");
+  const sim=empleados.length?`<div class="card"><div class="card-h"><h3>Simulador de liquidación</h3><span class="hint">Calcula antes de terminar el contrato</span></div>
+    <div class="card-b">
+    <div class="grid2" style="align-items:end">
+      <div class="field"><label for="liqEmp">Colaborador</label><select id="liqEmp" onchange="renderLiq()">${opts}</select></div>
+      <div class="field"><label for="liqMotivo">Causa de terminación</label>
+        <select id="liqMotivo" onchange="renderLiq()">
+          <option value="renuncia">Renuncia o mutuo acuerdo</option>
+          <option value="justificado">Despido justificado (Art. 213)</option>
+          <option value="injustificado">Despido injustificado (Art. 225)</option>
+        </select></div>
+    </div>
+    <div class="no-print" style="margin:4px 0 14px"><button class="btn btn-ghost btn-sm" onclick="imprimirElemento('#liqContainer .slip')" aria-label="Descargar liquidación en PDF"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Descargar PDF</button></div>
+    <div id="liqContainer"></div>
+  </div></div>`:`<div class="card"><div class="card-b" style="text-align:center;padding:36px;color:var(--gray)">No hay colaboradores activos para simular una liquidación.</div></div>`;
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+    <div>Para terminar un contrato y generar la liquidación real, usa el botón de <b>terminar contrato</b> en la lista de colaboradores. Aquí puedes <b>simular</b> el cálculo y consultar las liquidaciones ya ejecutadas.</div></div>
+  ${hist}${sim}`;
+};
+function exportarLiquidacionesCSV(){
+  const filas=[["Colaborador","Cédula","Cargo","Fecha","Causa","Antigüedad (años)","Prima antigüedad","Décimo proporcional","Vacaciones proporcionales","Indemnización","Total"]];
+  liquidaciones.forEach(x=>filas.push([x.nombre,x.cedula,x.cargo,x.fecha,x.motivoTxt,x.años.toFixed(2),x.primaAntiguedad.toFixed(2),x.decimoProporcional.toFixed(2),x.vacProporcional.toFixed(2),x.indemnizacion.toFixed(2),x.total.toFixed(2)]));
+  descargarCSV("Liquidaciones.csv",filas);
+}
+function renderLiq(){
+  const selE=document.getElementById("liqEmp"), selM=document.getElementById("liqMotivo");
+  const cont=document.getElementById("liqContainer");
+  if(!selE||!cont) return;
+  const e=empleados.find(x=>x.id===+selE.value); if(!e){cont.innerHTML="";return;}
+  const motivo=selM.value;
+  const l=liquidacion(e,motivo);
+  const motivoTxt={renuncia:"Renuncia o mutuo acuerdo",justificado:"Despido justificado",injustificado:"Despido injustificado"}[motivo];
+  cont.innerHTML=`<div class="slip">
+    <div class="slip-h"><div><div class="co">Planilla<span>Digital</span></div><div class="doc">Cálculo de liquidación</div></div>
+      <div class="per"><b style="color:#fff">${empresa.nombre}</b><br>RUC ${empresa.ruc}<br><b style="color:#fff">${motivoTxt}</b></div></div>
+    <div class="slip-emp"><div><div class="n">${e.nombre}</div><div class="r">${e.cargo}</div></div>
+      <div style="text-align:right"><div class="r">Antigüedad</div><div style="font-weight:600">${l.años.toFixed(2)} años</div></div></div>
+    <div class="slip-body">
+      <div class="slip-section">Prestaciones causadas</div>
+      <div class="slip-row ear"><span class="lbl">Prima de antigüedad<br><span class="mini">Art. 224 · una semana por año</span></span><span class="val">${fmt(l.primaAntiguedad)}</span></div>
+      <div class="slip-row ear"><span class="lbl">Décimo tercer mes proporcional<br><span class="mini">Acumulado desde la última partida</span></span><span class="val">${fmt(l.decimoProporcional)}</span></div>
+      <div class="slip-row ear"><span class="lbl">Vacaciones proporcionales<br><span class="mini">${l.vacDias} días pendientes</span></span><span class="val">${fmt(l.vacProporcional)}</span></div>
+      ${motivo==="injustificado"?`<div class="slip-section">Indemnización</div><div class="slip-row ear"><span class="lbl">Indemnización por despido injustificado<br><span class="mini">Art. 225 · escala progresiva</span></span><span class="val">${fmt(l.indemnizacion)}</span></div>`:""}
+    </div>
+    <div class="slip-net"><span class="lbl">Total a liquidar</span><span class="val">${fmt(l.total)}</span></div>
+    <div class="slip-foot">${empresa.nombre} · RUC ${empresa.ruc}<br>Cálculo estimado conforme al Código de Trabajo de Panamá. El monto final puede variar según el promedio salarial de los últimos 11 meses.<br>Documento generado por PlanillaDigital</div>
+  </div>`;
+  anunciar(`Liquidación calculada: total ${fmt(l.total)}`);
+}
+
+/* ===== EXPEDIENTE Y AMONESTACIONES ===== */
+const AMON_TIPO={verbal:"Advertencia verbal",escrita:"Advertencia escrita",observacion:"Observación",reconocimiento:"Reconocimiento"};
+const AMON_GRAV={leve:{t:"Leve",c:"var(--sev-leve)",bg:"#E3F2E5"},media:{t:"Media",c:"var(--sev-media)",bg:"#FDF3E0"},grave:{t:"Grave",c:"var(--sev-grave)",bg:"#FBE9E7"},positiva:{t:"Positiva",c:"var(--blue)",bg:"#E7F0FA"}};
+let filtroExp=0; // 0 = todos
+
+V.expediente = ()=>{
+  const activos=amonestaciones.filter(a=>filtroExp===0||a.empId===filtroExp);
+  // Conteos para las gráficas
+  const porGrav={leve:0,media:0,grave:0,positiva:0};
+  amonestaciones.forEach(a=>{porGrav[a.gravedad]=(porGrav[a.gravedad]||0)+1;});
+  const totalReg=amonestaciones.length;
+  const escritas=amonestaciones.filter(a=>a.tipo==="escrita").length;
+  const positivas=porGrav.positiva;
+  // ranking de colaboradores con más registros disciplinarios (excluye reconocimientos)
+  const conteoEmp={};
+  amonestaciones.filter(a=>a.gravedad!=="positiva").forEach(a=>{conteoEmp[a.empId]=(conteoEmp[a.empId]||0)+1;});
+  const ranking=Object.entries(conteoEmp).map(([id,n])=>({e:empById(+id),n})).filter(x=>x.e).sort((a,b)=>b.n-a.n).slice(0,5);
+  const maxRank=Math.max(...ranking.map(r=>r.n),1);
+
+  // Donut de distribución por gravedad
+  const donutData=[
+    {label:"Leves",val:porGrav.leve,color:"#2E7D32"},
+    {label:"Medias",val:porGrav.media,color:"#BF8F00"},
+    {label:"Graves",val:porGrav.grave,color:"#C0504D"},
+    {label:"Positivas",val:porGrav.positiva,color:"#2E75B6"},
+  ].filter(d=>d.val>0);
+  const donut=donutData.length?donutSVG("dAm","dlAm",donutData):null;
+
+  // Selector de colaborador
+  const opts=`<option value="0">Todos los colaboradores</option>`+
+    empleados.map(e=>`<option value="${e.id}" ${filtroExp===e.id?"selected":""}>${e.nombre}</option>`).join("");
+
+  // Línea de tiempo de registros
+  const timeline=activos.slice().sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(a=>{
+    const e=empById(a.empId); const g=AMON_GRAV[a.gravedad]||AMON_GRAV.leve;
+    const nombre=e?e.nombre:(a.nombreArch||"Colaborador dado de baja");
+    return `<div class="tl-item">
+      <div class="tl-marker" style="background:${g.c}"></div>
+      <div class="tl-card">
+        <div class="tl-head">
+          <div><span class="tl-emp">${nombre}</span> <span class="chip-grav" style="color:${g.c};background:${g.bg}">${g.t}</span></div>
+          <div class="tl-meta">${AMON_TIPO[a.tipo]||a.tipo} · ${fmtFecha(a.fecha)}</div>
+        </div>
+        <div class="tl-asunto">${a.asunto}</div>
+        <p class="tl-detalle">${a.detalle}</p>
+        <div class="tl-foot"><span class="mini">Registrado por: ${a.autor||"—"}</span>
+          <div style="display:flex;gap:4px">
+            <button class="btn-icon" onclick="generarActa(${a.id})" title="Generar acta en PDF" aria-label="Generar acta de ${nombre}"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
+            <button class="btn-icon danger" onclick="eliminarAmon(${a.id})" title="Eliminar registro" aria-label="Eliminar registro"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          </div></div>
+      </div></div>`;}).join("")
+    || `<div style="text-align:center;padding:36px;color:var(--gray)">No hay registros para este filtro.</div>`;
+
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <div>Registro formal de advertencias verbales y escritas, observaciones y reconocimientos adjudicados a cada colaborador. Un expediente ordenado respalda cualquier decisión disciplinaria y es una prueba válida ante una eventual reclamación laboral.</div></div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="label">Registros totales</div><div class="value">${totalReg}</div><div class="meta">En el expediente del equipo</div></div>
+    <div class="kpi rd"><div class="label">Advertencias escritas</div><div class="value">${escritas}</div><div class="meta">De carácter formal</div></div>
+    <div class="kpi g"><div class="label">Reconocimientos</div><div class="value">${positivas}</div><div class="meta">Notas positivas de desempeño</div></div>
+  </div>
+
+  <div class="row">
+    <div class="card"><div class="card-h"><h3>Distribución por gravedad</h3><span class="hint">Todos los registros</span></div>
+      <div class="card-b">${donut?`<div class="donut-wrap">${donut.svg}<ul class="legend">${donut.legend}</ul></div>`:`<div style="text-align:center;padding:30px;color:var(--gray)">Sin registros para graficar.</div>`}</div></div>
+    <div class="card"><div class="card-h"><h3>Colaboradores con más observaciones</h3><span class="hint">Excluye reconocimientos</span></div>
+      <div class="card-b">${ranking.length?ranking.map(r=>`
+        <div class="rank-row">
+          <div class="emp-cell"><div class="emp-ava">${initials(r.e.nombre)}</div><div class="emp-name">${r.e.nombre}</div></div>
+          <div class="rank-bar-wrap"><div class="rank-bar" style="width:${r.n/maxRank*100}%"></div></div>
+          <div class="rank-n">${r.n}</div>
+        </div>`).join(""):`<div style="text-align:center;padding:24px;color:var(--gray)">Sin observaciones disciplinarias registradas.</div>`}</div></div>
+  </div>
+
+  <div class="card"><div class="card-h"><h3>Historial de registros</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div class="field" style="margin:0"><select id="expFiltro" onchange="filtrarExp(this.value)" aria-label="Filtrar por colaborador">${opts}</select></div>
+      <button class="btn btn-ghost btn-sm no-print" onclick="exportarAmonestacionesCSV()" aria-label="Exportar expediente a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirAmon()"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo registro</button>
+    </div></div>
+    <div class="card-b"><div class="timeline">${timeline}</div></div></div>
+  <div id="modalHost"></div>`;
+};
+function filtrarExp(v){ filtroExp=+v; switchView("expediente"); }
+function eliminarAmon(id){
+  if(!confirm("¿Eliminar este registro del expediente? Esta acción no se puede deshacer.")) return;
+  amonestaciones=amonestaciones.filter(a=>a.id!==id);
+  guardar(); anunciar("Registro eliminado"); switchView("expediente");
+}
+function abrirAmon(){
+  if(!empleados.length){ alert("No hay colaboradores para registrar una amonestación."); return; }
+  const opts=empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join("");
+  const cuerpo=`
+    <div class="field"><label for="amEmp">Colaborador</label><select id="amEmp">${opts}</select></div>
+    <div class="grid2">
+      <div class="field"><label for="amTipo">Tipo de registro</label>
+        <select id="amTipo" onchange="sincronizarGravedad()">
+          <option value="verbal">Advertencia verbal</option>
+          <option value="escrita">Advertencia escrita</option>
+          <option value="observacion">Observación</option>
+          <option value="reconocimiento">Reconocimiento</option>
+        </select></div>
+      <div class="field"><label for="amGrav">Gravedad</label>
+        <select id="amGrav">
+          <option value="leve">Leve</option>
+          <option value="media">Media</option>
+          <option value="grave">Grave</option>
+          <option value="positiva">Positiva</option>
+        </select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="amFecha">Fecha</label><input id="amFecha" type="date" value="2026-07-15"></div>
+      <div class="field"><label for="amAutor">Registrado por</label><input id="amAutor" placeholder="Ej. Jefatura de operaciones" value="Supervisión"></div>
+    </div>
+    <div class="field"><label for="amAsunto">Asunto</label><input id="amAsunto" placeholder="Ej. Llegadas tarde reiteradas"></div>
+    <div class="field"><label for="amDetalle">Detalle</label><textarea id="amDetalle" rows="4" placeholder="Describe el hecho, el contexto y los acuerdos alcanzados."></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAmon()">Guardar registro</button>
+    </div>`;
+  document.getElementById("modalHost").innerHTML=modalShell("Nuevo registro en el expediente",cuerpo,580);
+}
+function sincronizarGravedad(){
+  const t=document.getElementById("amTipo").value, g=document.getElementById("amGrav");
+  if(t==="reconocimiento") g.value="positiva";
+  else if(t==="escrita") g.value="media";
+  else if(t==="verbal") g.value="leve";
+}
+function guardarAmon(){
+  const empId=+document.getElementById("amEmp").value;
+  const asunto=document.getElementById("amAsunto").value.trim();
+  if(!asunto){ alert("Indica el asunto del registro."); return; }
+  amonestaciones.unshift({
+    id:nextAmonId++, empId,
+    fecha:document.getElementById("amFecha").value||"2026-07-15",
+    tipo:document.getElementById("amTipo").value,
+    gravedad:document.getElementById("amGrav").value,
+    asunto,
+    detalle:document.getElementById("amDetalle").value.trim()||"Sin detalle adicional.",
+    autor:document.getElementById("amAutor").value.trim()||"—"
+  });
+  guardar(); cerrarModal(); anunciar("Registro guardado en el expediente"); switchView("expediente");
+}
+function exportarAmonestacionesCSV(){
+  const filas=[["Colaborador","Cédula","Fecha","Tipo","Gravedad","Asunto","Detalle","Registrado por"]];
+  amonestaciones.forEach(a=>{const e=empById(a.empId);
+    const nombre=e?e.nombre:(a.nombreArch||"(baja)");
+    const cedula=e?e.cedula:(a.cedulaArch||"—");
+    filas.push([nombre,cedula,a.fecha,AMON_TIPO[a.tipo]||a.tipo,AMON_GRAV[a.gravedad]?.t||a.gravedad,a.asunto,a.detalle,a.autor||"—"]);});
+  descargarCSV("Expediente_Amonestaciones.csv",filas);
+}
+
+function generarActa(id){
+  const a=amonestaciones.find(x=>x.id===id); if(!a)return;
+  const e=empById(a.empId);
+  const nombre=e?e.nombre:(a.nombreArch||"Colaborador");
+  const cargo=e?e.cargo:(a.cargoArch||"—");
+  const cedula=e?e.cedula:(a.cedulaArch||"—");
+  const g=AMON_GRAV[a.gravedad]||AMON_GRAV.leve;
+  const esRec=a.gravedad==="positiva";
+  const titulo=esRec?"Acta de reconocimiento":"Acta de amonestación";
+  const acta=`<div class="acta" id="actaDoc">
+    <div class="acta-head">
+      <div><div class="acta-co">Planilla<span>Digital</span></div><div class="acta-emp">${empresa.nombre} · RUC ${empresa.ruc}</div><div class="acta-emp">${empresa.direccion}</div></div>
+      <div class="acta-tipo" style="color:${g.c};border-color:${g.c}">${AMON_TIPO[a.tipo]||a.tipo}</div>
+    </div>
+    <h2 class="acta-titulo">${titulo}</h2>
+    <div class="acta-grid">
+      <div><span class="acta-lbl">Colaborador</span><span class="acta-val">${nombre}</span></div>
+      <div><span class="acta-lbl">Cédula</span><span class="acta-val">${cedula}</span></div>
+      <div><span class="acta-lbl">Cargo</span><span class="acta-val">${cargo}</span></div>
+      <div><span class="acta-lbl">Fecha</span><span class="acta-val">${fmtFecha(a.fecha)}</span></div>
+      <div><span class="acta-lbl">Clasificación</span><span class="acta-val">${g.t}</span></div>
+      <div><span class="acta-lbl">Registrado por</span><span class="acta-val">${a.autor||"—"}</span></div>
+    </div>
+    <div class="acta-sec">Asunto</div>
+    <p class="acta-txt"><b>${a.asunto}</b></p>
+    <div class="acta-sec">Descripción de los hechos</div>
+    <p class="acta-txt">${a.detalle}</p>
+    ${esRec?"":`<p class="acta-txt" style="margin-top:14px">Se deja constancia de la presente amonestación como parte del expediente laboral del colaborador, conforme a las normas internas de la empresa y al Código de Trabajo de la República de Panamá. Su reiteración podrá dar lugar a medidas disciplinarias adicionales.</p>`}
+    <div class="acta-firmas">
+      <div class="acta-firma"><div class="acta-linea"></div>Firma del colaborador</div>
+      <div class="acta-firma"><div class="acta-linea"></div>Firma del representante de la empresa</div>
+    </div>
+    <div class="acta-foot">Documento generado por PlanillaDigital · ${empresa.nombre} · ${new Date().toLocaleDateString("es-PA")}</div>
+  </div>
+  <div class="no-print" style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+    <button class="btn btn-ghost" onclick="cerrarModal()">Cerrar</button>
+    <button class="btn btn-primary" onclick="imprimirElemento('#actaDoc')"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Descargar PDF</button>
+  </div>`;
+  document.getElementById("modalHost").innerHTML=modalShell(titulo,acta,640);
+}
+V.historial = ()=>{
+  const t=totales();
+  const vacio=historialPeriodos.length===0;
+  const banner=`<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+    <div>Al cerrar un período desde la pantalla de planilla, su resumen queda archivado aquí. El período de trabajo actual es <b>${periodoActual}</b>, aún abierto.</div></div>`;
+  if(vacio){
+    return banner+`<div class="card"><div class="card-b" style="text-align:center;padding:40px 20px">
+      <div class="comp-ic ok" style="width:52px;height:52px;margin:0 auto 14px"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div style="font-weight:700;color:var(--navy);font-size:15px;margin-bottom:6px">Aún no hay períodos cerrados</div>
+      <p style="font-size:13px;color:var(--gray);max-width:420px;margin:0 auto 16px">Cierra el período actual desde la pantalla de <b>Cálculo de planilla</b> para archivar su resumen y comenzar a comparar la evolución mes a mes.</p>
+      <button class="btn btn-primary btn-sm" onclick="switchView('planilla')">Ir a la planilla</button></div></div>`;
+  }
+  // Serie para comparación (períodos archivados, del más antiguo al más reciente + actual en curso)
+  const serie=[...historialPeriodos].reverse();
+  const maxCosto=Math.max(...serie.map(p=>p.costoTotal), t.costoTotal)||1;
+  const bars=serie.map(p=>`<div class="bar-col">
+    <div class="bar-val">B/.${(p.costoTotal/1000).toFixed(1)}k</div>
+    <div class="bar" style="height:${p.costoTotal/maxCosto*100}%" title="${p.periodo}: ${fmt0(p.costoTotal)}"></div>
+    <div class="bar-lbl">${p.periodo.split(" ")[0].slice(0,3)}</div></div>`).join("")
+    +`<div class="bar-col"><div class="bar-val">B/.${(t.costoTotal/1000).toFixed(1)}k</div>
+      <div class="bar" style="height:${t.costoTotal/maxCosto*100}%;background:linear-gradient(180deg,var(--navy),var(--blue))" title="${periodoActual}: ${fmt0(t.costoTotal)}"></div>
+      <div class="bar-lbl">${periodoActual.split(" ")[0].slice(0,3)}*</div></div>`;
+  const rows=historialPeriodos.map(p=>`<tr>
+    <td><b>${p.periodo}</b><div class="mini">Cerrado el ${p.fecha}</div></td>
+    <td class="num">${p.empleados}</td>
+    <td class="num">${fmt(p.bruto)}</td>
+    <td class="num" style="color:var(--green)">${fmt(p.neto)}</td>
+    <td class="num">${fmt(p.cargaPat)}</td>
+    <td class="num" style="color:var(--navy);font-weight:700">${fmt(p.costoTotal)}</td></tr>`).join("");
+  return banner+`<div class="card"><div class="card-h"><h3>Evolución del costo laboral</h3><span class="hint">Costo total empleador por período · (*) en curso</span></div>
+    <div class="card-b"><div class="bars">${bars}</div></div></div>
+  <div class="card"><div class="card-h"><h3>Períodos archivados</h3>
+    <button class="btn btn-ghost btn-sm no-print" onclick="exportarHistorialCSV()" aria-label="Exportar historial a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr>
+      <th scope="col">Período</th><th scope="col" style="text-align:right">Colab.</th><th scope="col" style="text-align:right">Planilla bruta</th><th scope="col" style="text-align:right">Neto pagado</th><th scope="col" style="text-align:right">Cargas patronales</th><th scope="col" style="text-align:right">Costo total</th>
+    </tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+};
+function exportarHistorialCSV(){
+  const filas=[["Período","Fecha de cierre","Colaboradores","Planilla bruta","Neto pagado","CSS","Seguro Educativo","ISR","Cargas patronales","Costo total"]];
+  historialPeriodos.forEach(p=>filas.push([p.periodo,p.fecha,p.empleados,p.bruto.toFixed(2),p.neto.toFixed(2),p.css.toFixed(2),p.se.toFixed(2),p.isr.toFixed(2),p.cargaPat.toFixed(2),p.costoTotal.toFixed(2)]));
+  descargarCSV("Historial_Periodos.csv",filas);
+}
+
+/* ===== PERSONAL DADO DE BAJA ===== */
+V.bajas = ()=>{
+  if(!bajas.length){
+    return `<div class="card"><div class="card-b" style="text-align:center;padding:40px 20px">
+      <div class="comp-ic ok" style="width:52px;height:52px;margin:0 auto 14px"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+      <div style="font-weight:700;color:var(--navy);font-size:15px;margin-bottom:6px">No hay personal dado de baja</div>
+      <p style="font-size:13px;color:var(--gray);max-width:420px;margin:0 auto">Cuando termines el contrato de un colaborador desde la lista de colaboradores, su registro y liquidación quedarán archivados aquí.</p></div></div>`;
+  }
+  const rows=bajas.map(b=>`<tr>
+    <td><div class="emp-cell"><div class="emp-ava">${initials(b.nombre)}</div><div><div class="emp-name">${b.nombre}</div><div class="emp-role">${b.cargo}</div></div></div></td>
+    <td class="mini">${b.cedula}</td>
+    <td>${fmtFecha(b.bajaFecha)}</td>
+    <td><span class="tag ${b.bajaMotivo&&b.bajaMotivo.includes("injustificado")?'warn':'info'}">${b.bajaMotivo||"—"}</span></td>
+    <td class="num" style="color:var(--navy);font-weight:700">${fmt(b.liquidacionTotal||0)}</td>
+    <td style="text-align:right;white-space:nowrap">
+      <button class="btn btn-ghost btn-sm" onclick="reingresar(${b.id})" aria-label="Reingresar a ${b.nombre}"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Reingresar</button></td></tr>`).join("");
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    <div>Archivo del personal desvinculado con su fecha de baja, causa y liquidación pagada. El reingreso vuelve a incorporar al colaborador a la planilla activa con sus datos previos.</div></div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="label">Total de bajas</div><div class="value">${bajas.length}</div><div class="meta">Colaboradores desvinculados</div></div>
+    <div class="kpi rd"><div class="label">Liquidaciones pagadas</div><div class="value">${fmt0(bajas.reduce((a,b)=>a+(b.liquidacionTotal||0),0))}</div><div class="meta">Suma histórica</div></div>
+  </div>
+  <div class="card"><div class="card-h"><h3>Colaboradores dados de baja</h3>
+    <button class="btn btn-ghost btn-sm no-print" onclick="exportarBajasCSV()" aria-label="Exportar bajas a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr>
+      <th scope="col">Colaborador</th><th scope="col">Cédula</th><th scope="col">Fecha de baja</th><th scope="col">Causa</th><th scope="col" style="text-align:right">Liquidación</th><th scope="col" style="text-align:right">Acción</th>
+    </tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
+};
+function reingresar(id){
+  const b=bajas.find(x=>x.id===id); if(!b)return;
+  if(!confirm(`¿Reingresar a ${b.nombre} a la planilla activa?`)) return;
+  const {bajaFecha,bajaMotivo,liquidacionTotal,...datos}=b;
+  datos.id=nextId++;
+  empleados.push(datos);
+  // reasociar amonestaciones archivadas al nuevo id
+  amonestaciones.forEach(a=>{ if(a.nombreArch===b.nombre&&!empById(a.empId)) a.empId=datos.id; });
+  bajas=bajas.filter(x=>x.id!==id);
+  guardar(); anunciar(`${b.nombre} reingresado a la planilla`); switchView("empleados");
+}
+function exportarBajasCSV(){
+  const filas=[["Colaborador","Cédula","Cargo","Fecha de ingreso","Fecha de baja","Causa","Liquidación pagada"]];
+  bajas.forEach(b=>filas.push([b.nombre,b.cedula,b.cargo,b.ingreso,b.bajaFecha,b.bajaMotivo||"—",(b.liquidacionTotal||0).toFixed(2)]));
+  descargarCSV("Personal_Baja.csv",filas);
+}
+
+/* ===== USUARIOS Y ROLES ===== */
+V.usuarios = ()=>{
+  if(rolActivo()!=="admin"){
+    return `<div class="card"><div class="card-b" style="text-align:center;padding:40px 20px">
+      <div class="comp-ic warn" style="width:52px;height:52px;margin:0 auto 14px"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div style="font-weight:700;color:var(--navy);font-size:15px;margin-bottom:6px">Acceso restringido</div>
+      <p style="font-size:13px;color:var(--gray);max-width:400px;margin:0 auto">La gestión de usuarios está reservada al rol Administrador.</p></div></div>`;
+  }
+  const rows=usuarios.map(u=>{
+    const r=ROLES[u.rol]; const esActivo=u.id===usuarioActivoId;
+    return `<tr>
+      <td><div class="emp-cell"><div class="emp-ava" style="background:${r.color}">${initials(u.nombre)}</div>
+        <div><div class="emp-name">${u.nombre} ${esActivo?'<span class="tag ok" style="margin-left:6px">Sesión activa</span>':''}</div><div class="emp-role">${u.correo||"—"}</div></div></div></td>
+      <td><span class="rol-badge" style="color:${r.color};background:${r.color}1A">${r.nombre}</span></td>
+      <td class="mini">${r.desc}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn-icon" onclick="abrirUsuario(${u.id})" title="Editar" aria-label="Editar a ${u.nombre}"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+        <button class="btn-icon danger" onclick="eliminarUsuario(${u.id})" title="Eliminar" aria-label="Eliminar a ${u.nombre}" ${esActivo?'disabled style="opacity:.4;cursor:not-allowed"':''}><svg class="ic" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td></tr>`;}).join("");
+  const cards=Object.entries(ROLES).map(([k,r])=>{
+    const n=usuarios.filter(u=>u.rol===k).length;
+    const vistas=PERMISOS[k].length;
+    return `<div class="rol-card" style="border-top:3px solid ${r.color}">
+      <div class="rol-card-h" style="color:${r.color}">${r.nombre}</div>
+      <div class="rol-card-d">${r.desc}</div>
+      <div class="rol-card-meta"><span>${n} usuario(s)</span><span>${vistas} secciones</span></div></div>`;}).join("");
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+    <div>Cada usuario accede al sistema según su rol. El <b>Administrador</b> controla todo, el <b>Supervisor</b> opera la nómina sin tocar la configuración ni los usuarios, y el <b>Colaborador</b> solo consulta su información y sus recibos.</div></div>
+  <div class="rol-cards">${cards}</div>
+  <div class="card"><div class="card-h"><h3>Usuarios del sistema</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm no-print" onclick="exportarUsuariosCSV()" aria-label="Exportar usuarios a CSV"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirUsuario(0)"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo usuario</button>
+    </div></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr>
+      <th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Alcance</th><th scope="col" style="text-align:right">Acciones</th>
+    </tr></thead><tbody>${rows}</tbody></table></div></div></div>
+  <div id="modalHost"></div>`;
+};
+function abrirUsuario(id){
+  const u=id?usuarios.find(x=>x.id===id):{nombre:"",rol:"colaborador",correo:""};
+  const nuevo=!id;
+  const rolOpts=Object.entries(ROLES).map(([k,r])=>`<option value="${k}" ${u.rol===k?"selected":""}>${r.nombre} — ${r.desc}</option>`).join("");
+  const cuerpo=`
+    <div class="field"><label for="usNombre">Nombre completo</label><input id="usNombre" value="${u.nombre}" placeholder="Ej. Fabián Montenegro"></div>
+    <div class="field"><label for="usCorreo">Correo</label><input id="usCorreo" type="email" value="${u.correo||''}" placeholder="usuario@empresa.pa"></div>
+    <div class="field"><label for="usRol">Rol</label><select id="usRol">${rolOpts}</select></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarUsuario(${id})">${nuevo?"Crear usuario":"Guardar cambios"}</button>
+    </div>`;
+  document.getElementById("modalHost").innerHTML=modalShell(nuevo?"Nuevo usuario":"Editar usuario",cuerpo,520);
+}
+function guardarUsuario(id){
+  const nombre=document.getElementById("usNombre").value.trim();
+  if(!nombre){ alert("El nombre no puede quedar vacío."); return; }
+  const rol=document.getElementById("usRol").value;
+  const correo=document.getElementById("usCorreo").value.trim();
+  if(id){ const u=usuarios.find(x=>x.id===id); u.nombre=nombre; u.rol=rol; u.correo=correo;
+    if(id===usuarioActivoId){ actualizarUsuarioUI(); construirMenu(); } }
+  else usuarios.push({id:nextUsuarioId++, nombre, rol, correo});
+  guardar(); cerrarModal(); anunciar("Usuario guardado"); switchView("usuarios");
+}
+function eliminarUsuario(id){
+  if(id===usuarioActivoId){ alert("No puede eliminar el usuario con la sesión activa."); return; }
+  if(usuarios.length<=1){ alert("Debe existir al menos un usuario."); return; }
+  const u=usuarios.find(x=>x.id===id);
+  if(!confirm(`¿Eliminar al usuario ${u.nombre}?`)) return;
+  usuarios=usuarios.filter(x=>x.id!==id);
+  guardar(); anunciar("Usuario eliminado"); switchView("usuarios");
+}
+function exportarUsuariosCSV(){
+  const filas=[["Nombre","Correo","Rol","Alcance"]];
+  usuarios.forEach(u=>filas.push([u.nombre,u.correo||"—",ROLES[u.rol].nombre,ROLES[u.rol].desc]));
+  descargarCSV("Usuarios.csv",filas);
+}
+
+/* ===== EXPORTADORES CSV ===== */
+function exportarPlanillaCSV(){
+  const filas=[["Empleado","Cédula","Cargo","Bruto","CSS 9.75%","Seguro Educativo 1.25%","ISR","Otros","Neto"]];
+  empleados.forEach(e=>{const c=calc(e);
+    filas.push([e.nombre,e.cedula,e.cargo,c.bruto.toFixed(2),c.css.toFixed(2),c.se.toFixed(2),c.isr.toFixed(2),(+e.otros||0).toFixed(2),c.neto.toFixed(2)]);});
+  const t=totales();
+  filas.push(["TOTALES","","",t.bruto.toFixed(2),t.css.toFixed(2),t.se.toFixed(2),t.isr.toFixed(2),"",t.neto.toFixed(2)]);
+  descargarCSV("Planilla_Julio2026.csv",filas);
+}
+function exportarVacacionesCSV(){
+  const filas=[["Colaborador","Cédula","Antigüedad (años)","Días causados","Días gozados","Días aprobados","Días pendientes","Valor pendiente"]];
+  empleados.forEach(e=>{const v=vacaciones(e);
+    filas.push([e.nombre,e.cedula,antiguedad(e.ingreso).toFixed(2),v.causados,+e.vacGozadas||0,v.aprobados,v.pendientes,v.valorPendiente.toFixed(2)]);});
+  descargarCSV("Vacaciones.csv",filas);
+}
+function exportarColaboradoresCSV(){
+  const filas=[["Nombre","Cédula","Cargo","Fecha de ingreso","Antigüedad (años)","Salario base","Bonificaciones","Horas extras","Otros descuentos","Salario neto","Contrato","Costo empleador"]];
+  empleados.forEach(e=>{const c=calc(e);
+    filas.push([e.nombre,e.cedula,e.cargo,e.ingreso,antiguedad(e.ingreso).toFixed(2),(+e.salario).toFixed(2),(+e.bono||0).toFixed(2),(+e.extras||0).toFixed(2),(+e.otros||0).toFixed(2),c.neto.toFixed(2),e.contrato?"Registrado":"Pendiente",c.costoTotal.toFixed(2)]);});
+  descargarCSV("Colaboradores.csv",filas);
+}
+
+/* ============ NAVEGACIÓN ============ */
+const titles={
+  dashboard:["Resumen general","Panorama de la nómina del período actual"],
+  empleados:["Empleados","Gestión de colaboradores en planilla"],
+  alta:["Alta exprés","Registro guiado de un nuevo colaborador"],
+  planilla:["Cálculo de planilla","Deducciones y salario neto del período"],
+  colilla:["Recibos de pago","Comprobante individual por colaborador"],
+  vacaciones:["Control de vacaciones","Días causados, gozados y pendientes (Art. 52 C.T.)"],
+  liquidacion:["Liquidaciones","Cálculo de prestaciones al terminar el contrato"],
+  expediente:["Expediente y amonestaciones","Advertencias, observaciones y reconocimientos por colaborador"],
+  bajas:["Personal dado de baja","Colaboradores desvinculados y sus liquidaciones"],
+  cumplimiento:["Cumplimiento de regulaciones","Obligaciones laborales y su estado"],
+  leyes:["Análisis de leyes laborales","Cómo el sistema aplica el Código de Trabajo"],
+  reportes:["Reportes","Aportes, costos y resumen para la CSS"],
+  historial:["Historial de períodos","Planillas archivadas y comparación entre meses"],
+  empresa:["Datos de la empresa","Configuración del negocio"],
+  usuarios:["Usuarios y roles","Gestión de accesos al sistema"]
+};
+function construirMenu(){
+  const permitidas=PERMISOS[rolActivo()]||[];
+  document.querySelectorAll(".nav-item").forEach(b=>{
+    b.style.display = permitidas.includes(b.dataset.view) ? "" : "none";
+  });
+  // ocultar la etiqueta de un grupo si no tiene ítems visibles
+  document.querySelectorAll("[data-grupo-label]").forEach(lbl=>{
+    const g=lbl.getAttribute("data-grupo-label");
+    const algunoVisible=[...document.querySelectorAll(`.nav-item[data-grupo="${g}"]`)].some(b=>b.style.display!=="none");
+    lbl.style.display=algunoVisible?"":"none";
+  });
+}
+function switchView(v){
+  // control de acceso por rol
+  if(!puedeVer(v)){
+    anunciar("No tiene permiso para acceder a esta sección");
+    v="dashboard";
+  }
+  document.querySelectorAll(".nav-item").forEach(b=>{
+    const on=b.dataset.view===v;
+    b.classList.toggle("active",on);
+    if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+  });
+  document.getElementById("content").innerHTML = V[v]();
+  document.getElementById("viewTitle").textContent=titles[v][0];
+  document.getElementById("viewSub").textContent=titles[v][1];
+  cerrarMenu();
+  anunciar(titles[v][0]+". "+titles[v][1]);
+  if(v==="colilla") renderSlip();
+  if(v==="liquidacion") renderLiq();
+  if(v==="alta"&&wizardStep===2) livePreview();
+}
+function toggleMenu(){
+  const sb=document.getElementById("sidebar");
+  sb.classList.contains("open")?cerrarMenu():abrirMenu();
+}
+function abrirMenu(){
+  document.getElementById("sidebar").classList.add("open");
+  document.getElementById("sidebarOverlay").classList.add("show");
+  document.getElementById("menuBtn").setAttribute("aria-expanded","true");
+}
+function cerrarMenu(){
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebarOverlay").classList.remove("show");
+  const b=document.getElementById("menuBtn"); if(b) b.setAttribute("aria-expanded","false");
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") cerrarMenu(); });
+document.querySelectorAll(".nav-item").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+
+/* ============ EMPLEADOS ============ */
+/* ===== MODALES ===== */
+function cerrarModal(){ const h=document.getElementById("modalHost"); if(h) h.innerHTML=""; }
+function modalShell(titulo,cuerpo,ancho=520){
+  return `<div class="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="${titulo}" style="max-width:${ancho}px">
+      <div class="modal-h"><h3>${titulo}</h3><button class="btn-icon" onclick="cerrarModal()" aria-label="Cerrar"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+      <div class="modal-b">${cuerpo}</div>
+    </div></div>`;
+}
+
+/* ===== EDITAR COLABORADOR ===== */
+function abrirEditar(id){
+  const e=empById(id); if(!e)return;
+  const cuerpo=`
+    <div class="grid2">
+      <div class="field"><label for="edNombre">Nombre completo</label><input id="edNombre" value="${e.nombre}"></div>
+      <div class="field"><label for="edCedula">Cédula</label><input id="edCedula" value="${e.cedula}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="edCargo">Cargo</label><input id="edCargo" value="${e.cargo}"></div>
+      <div class="field"><label for="edIngreso">Fecha de ingreso</label><input id="edIngreso" type="date" value="${e.ingreso}"></div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label for="edSalario">Salario base (B/.)</label><input id="edSalario" type="number" value="${e.salario}"></div>
+      <div class="field"><label for="edBono">Bonificaciones (B/.)</label><input id="edBono" type="number" value="${+e.bono||0}"></div>
+      <div class="field"><label for="edExtras">Horas extras (B/.)</label><input id="edExtras" type="number" value="${+e.extras||0}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="edOtros">Otros descuentos (B/.)</label><input id="edOtros" type="number" value="${+e.otros||0}"></div>
+      <div class="field"><label for="edVac">Días de vacaciones ya gozados</label><input id="edVac" type="number" value="${+e.vacGozadas||0}"></div>
+    </div>
+    <div class="field"><label for="edContrato">Contrato escrito</label>
+      <select id="edContrato"><option value="si" ${e.contrato?"selected":""}>Registrado</option><option value="no" ${!e.contrato?"selected":""}>Pendiente</option></select></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEditar(${id})">Guardar cambios</button>
+    </div>`;
+  document.getElementById("modalHost").innerHTML=modalShell("Editar colaborador",cuerpo,560);
+}
+function guardarEditar(id){
+  const e=empById(id); if(!e)return;
+  const n=document.getElementById("edNombre").value.trim();
+  if(!n){ alert("El nombre no puede quedar vacío."); return; }
+  e.nombre=n;
+  e.cedula=document.getElementById("edCedula").value.trim()||"—";
+  e.cargo=document.getElementById("edCargo").value.trim()||"Colaborador";
+  e.ingreso=document.getElementById("edIngreso").value||e.ingreso;
+  e.salario=+document.getElementById("edSalario").value||e.salario;
+  e.bono=+document.getElementById("edBono").value||0;
+  e.extras=+document.getElementById("edExtras").value||0;
+  e.otros=+document.getElementById("edOtros").value||0;
+  e.vacGozadas=+document.getElementById("edVac").value||0;
+  e.contrato=document.getElementById("edContrato").value==="si";
+  guardar(); cerrarModal(); anunciar("Datos de "+e.nombre+" actualizados");
+  switchView("empleados");
+}
+
+/* ===== TERMINACIÓN / DESPIDO CON LIQUIDACIÓN ===== */
+function abrirTerminacion(id){
+  const e=empById(id); if(!e)return;
+  const cuerpo=`
+    <div class="alert" style="margin-bottom:16px"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div>Vas a terminar la relación laboral de <b>${e.nombre}</b>. El sistema calculará la liquidación, la archivará y dará de baja al colaborador de la planilla activa.</div></div>
+    <div class="field"><label for="tMotivo">Causa de la terminación</label>
+      <select id="tMotivo" onchange="preverLiq(${id})">
+        <option value="renuncia">Renuncia o mutuo acuerdo</option>
+        <option value="justificado">Despido justificado (Art. 213)</option>
+        <option value="injustificado">Despido injustificado (Art. 225)</option>
+      </select></div>
+    <div class="field"><label for="tFecha">Fecha de terminación</label><input id="tFecha" type="date" value="2026-07-15"></div>
+    <div class="preview-box" id="tPreview"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" style="background:var(--red)" onclick="ejecutarTerminacion(${id})">Confirmar terminación</button>
+    </div>`;
+  document.getElementById("modalHost").innerHTML=modalShell("Terminar contrato",cuerpo,560);
+  preverLiq(id);
+}
+function preverLiq(id){
+  const e=empById(id); if(!e)return;
+  const motivo=document.getElementById("tMotivo").value;
+  const l=liquidacion(e,motivo);
+  const box=document.getElementById("tPreview"); if(!box)return;
+  box.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">Vista previa de la liquidación</div>
+    <div class="pr-row"><span>Prima de antigüedad</span><span class="v">${fmt(l.primaAntiguedad)}</span></div>
+    <div class="pr-row"><span>Décimo proporcional</span><span class="v">${fmt(l.decimoProporcional)}</span></div>
+    <div class="pr-row"><span>Vacaciones proporcionales</span><span class="v">${fmt(l.vacProporcional)}</span></div>
+    ${motivo==="injustificado"?`<div class="pr-row"><span>Indemnización (Art. 225)</span><span class="v">${fmt(l.indemnizacion)}</span></div>`:""}
+    <div class="pr-row pr-net"><span><b>Total a liquidar</b></span><span class="v" style="color:var(--green)">${fmt(l.total)}</span></div>`;
+}
+function ejecutarTerminacion(id){
+  const e=empById(id); if(!e)return;
+  const motivo=document.getElementById("tMotivo").value;
+  const fecha=document.getElementById("tFecha").value||"2026-07-15";
+  const l=liquidacion(e,motivo);
+  const motivoTxt={renuncia:"Renuncia o mutuo acuerdo",justificado:"Despido justificado",injustificado:"Despido injustificado"}[motivo];
+  liquidaciones.unshift({
+    id:Date.now(), empId:e.id, nombre:e.nombre, cargo:e.cargo, cedula:e.cedula,
+    fecha, motivo, motivoTxt, años:l.años,
+    primaAntiguedad:l.primaAntiguedad, decimoProporcional:l.decimoProporcional,
+    vacProporcional:l.vacProporcional, indemnizacion:l.indemnizacion, total:l.total
+  });
+  bajas.unshift({...e, bajaFecha:fecha, bajaMotivo:motivoTxt, liquidacionTotal:l.total});
+  // Conservar la identidad en el expediente aunque el colaborador salga de la lista activa
+  amonestaciones.forEach(a=>{ if(a.empId===id){ a.nombreArch=e.nombre; a.cargoArch=e.cargo; a.cedulaArch=e.cedula; } });
+  empleados=empleados.filter(x=>x.id!==id);
+  solicitudesVac=solicitudesVac.filter(s=>s.empId!==id);
+  guardar(); cerrarModal();
+  anunciar(`${e.nombre} liquidado. Total ${fmt(l.total)}`);
+  switchView("liquidacion");
+}
+function verColilla(id){ switchView("colilla"); document.getElementById("slipSelect").value=id; renderSlip(); }
+
+/* ============ ALTA EXPRÉS (WIZARD) ============ */
+function wizardNext(step){
+  if(step===1){
+    const n=document.getElementById("wNombre").value.trim();
+    if(!n){alert("Ingresa el nombre del colaborador.");return;}
+    wizardData.nombre=n;
+    wizardData.cedula=document.getElementById("wCedula").value.trim()||"—";
+    wizardData.cargo=document.getElementById("wCargo").value.trim()||"Colaborador";
+    wizardData.ingreso=document.getElementById("wIngreso").value||"2026-07-01";
+    wizardStep=2; switchView("alta"); livePreview();
+  } else if(step===2){
+    const s=+document.getElementById("wSalario").value;
+    if(!s||s<=0){alert("Ingresa un salario base válido.");return;}
+    wizardData.salario=s;
+    wizardData.bono=+document.getElementById("wBono").value||0;
+    wizardData.extras=+document.getElementById("wExtras").value||0;
+    wizardData.otros=+document.getElementById("wOtros").value||0;
+    wizardStep=3; switchView("alta"); renderConfirm();
+  }
+}
+function wizardBack(step){ wizardStep=step; switchView("alta"); if(step===2)livePreview(); }
+function livePreview(){
+  const box=document.getElementById("livePrev"); if(!box)return;
+  const s=+document.getElementById("wSalario").value||0;
+  const b=+document.getElementById("wBono").value||0;
+  const x=+document.getElementById("wExtras")?.value||0;
+  const o=+document.getElementById("wOtros").value||0;
+  if(s<=0){box.innerHTML=`<div class="mini">Ingresa un salario para ver el cálculo en vivo.</div>`;return;}
+  const c=calc({salario:s,bono:b,extras:x,otros:o});
+  box.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">Vista previa del cálculo</div>
+    <div class="pr-row"><span>Total devengado</span><span class="v">${fmt(c.bruto)}</span></div>
+    <div class="pr-row"><span>CSS (9.75%)</span><span class="v" style="color:var(--red)">- ${fmt(c.css)}</span></div>
+    <div class="pr-row"><span>Seguro Educativo (1.25%)</span><span class="v" style="color:var(--red)">- ${fmt(c.se)}</span></div>
+    <div class="pr-row"><span>ISR</span><span class="v" style="color:var(--red)">${c.isr>0?"- "+fmt(c.isr):"Exento"}</span></div>
+    ${o>0?`<div class="pr-row"><span>Otros descuentos</span><span class="v" style="color:var(--red)">- ${fmt(o)}</span></div>`:""}
+    <div class="pr-row pr-net"><span><b>Salario neto</b></span><span class="v" style="color:var(--green)">${fmt(c.neto)}</span></div>`;
+}
+function renderConfirm(){
+  const box=document.getElementById("wizardConfirm"); if(!box)return;
+  const c=calc(wizardData);
+  box.innerHTML=`<div style="text-align:center;margin-bottom:18px">
+      <div class="comp-ic ok" style="width:48px;height:48px;margin:0 auto 10px"><svg class="ic" viewBox="0 0 24 24" width="26" height="26"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <div style="font-weight:700;color:var(--navy);font-size:16px">Todo listo para registrar</div>
+      <div class="mini">Revisa los datos antes de confirmar</div></div>
+    <div class="preview-box">
+      <div class="pr-row"><span>Nombre</span><span class="v">${wizardData.nombre}</span></div>
+      <div class="pr-row"><span>Cédula</span><span class="v">${wizardData.cedula}</span></div>
+      <div class="pr-row"><span>Cargo</span><span class="v">${wizardData.cargo}</span></div>
+      <div class="pr-row"><span>Ingreso</span><span class="v">${wizardData.ingreso}</span></div>
+      <div class="pr-row"><span>Salario base</span><span class="v">${fmt(wizardData.salario)}</span></div>
+      <div class="pr-row pr-net"><span><b>Salario neto estimado</b></span><span class="v" style="color:var(--green)">${fmt(c.neto)}</span></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-ghost" onclick="wizardBack(2)">← Atrás</button>
+      <button class="btn btn-primary" onclick="wizardSave()">✓ Registrar colaborador</button></div>`;
+}
+function wizardSave(){
+  empleados.push({id:nextId++, vacGozadas:0, contrato:false, ...wizardData});
+  wizardStep=1; wizardData={};
+  guardar();
+  anunciar("Colaborador registrado correctamente");
+  switchView("empleados");
+}
+
+/* ============ COMPROBANTE ============ */
+function renderSlip(){
+  const sel=document.getElementById("slipSelect"); if(!sel)return;
+  const id=+sel.value, e=empleados.find(x=>x.id===id);
+  const cont=document.getElementById("slipContainer");
+  if(!e){cont.innerHTML="";return;}
+  const c=calc(e);
+  cont.innerHTML=`<div class="slip">
+    <div class="slip-h"><div><div class="co">Planilla<span>Digital</span></div><div class="doc">Comprobante de pago</div></div>
+      <div class="per"><b style="color:#fff">${empresa.nombre}</b><br>RUC ${empresa.ruc}<br>${empresa.direccion}<br><b style="color:#fff">${periodoActual}</b></div></div>
+    <div class="slip-emp"><div><div class="n">${e.nombre}</div><div class="r">${e.cargo}</div></div>
+      <div style="text-align:right"><div class="r">Cédula</div><div style="font-weight:600">${e.cedula}</div></div></div>
+    <div class="slip-body">
+      <div class="slip-section">Ingresos</div>
+      <div class="slip-row ear"><span class="lbl">Salario base</span><span class="val">${fmt(e.salario)}</span></div>
+      ${(+e.bono>0)?`<div class="slip-row ear"><span class="lbl">Bonificaciones / comisiones</span><span class="val">${fmt(+e.bono)}</span></div>`:""}
+      <div class="slip-row"><span class="lbl"><b>Total devengado</b></span><span class="val">${fmt(c.bruto)}</span></div>
+      <div class="slip-section">Deducciones</div>
+      <div class="slip-row ded"><span class="lbl">Seguro Social (CSS 9.75%)</span><span class="val">- ${fmt(c.css)}</span></div>
+      <div class="slip-row ded"><span class="lbl">Seguro Educativo (1.25%)</span><span class="val">- ${fmt(c.se)}</span></div>
+      <div class="slip-row ded"><span class="lbl">Impuesto sobre la renta</span><span class="val">${c.isr>0?"- "+fmt(c.isr):"Exento"}</span></div>
+      ${(+e.otros>0)?`<div class="slip-row ded"><span class="lbl">Otros descuentos autorizados</span><span class="val">- ${fmt(+e.otros)}</span></div>`:""}
+      <div class="slip-row"><span class="lbl"><b>Total deducciones</b></span><span class="val">- ${fmt(c.dedLey+ +e.otros)}</span></div>
+    </div>
+    <div class="slip-net"><span class="lbl">Salario neto</span><span class="val">${fmt(c.neto)}</span></div>
+    <div class="slip-foot">${empresa.nombre} · RUC ${empresa.ruc}<br>Aporte patronal: ${fmt(c.cargaPat)} · Costo total empleador: ${fmt(c.costoTotal)}<br>Documento generado por PlanillaDigital · Conforme a la legislación laboral de Panamá</div>
+  </div>`;
+}
+
+/* ============ EMPRESA ============ */
+function saveEmpresa(){
+  empresa.nombre=document.getElementById("cNombre").value.trim()||empresa.nombre;
+  empresa.ruc=document.getElementById("cRuc").value.trim();
+  empresa.dv=document.getElementById("cDv").value.trim();
+  empresa.actividad=document.getElementById("cAct").value.trim();
+  empresa.riesgoCIIU=+document.getElementById("cRiesgo").value||1.05;
+  empresa.direccion=document.getElementById("cDir").value.trim();
+  empresa.correo=document.getElementById("cMail").value.trim();
+  document.getElementById("chipCo").textContent=empresa.nombre;
+  guardar();
+  anunciar("Datos de la empresa actualizados");
+  const s=document.getElementById("empSaved"); s.style.display="inline"; setTimeout(()=>s.style.display="none",2200);
+}
+
+/* ============ CIERRE DE PERÍODO ============ */
+function siguientePeriodo(p){
+  const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const [m,a]=p.split(" "); let i=meses.indexOf(m), año=+a;
+  i++; if(i>11){ i=0; año++; }
+  return meses[i]+" "+año;
+}
+function cerrarPeriodo(){
+  const t=totales();
+  if(empleados.length===0){ alert("No hay colaboradores en la planilla para cerrar el período."); return; }
+  if(!confirm(`Se archivará la planilla de ${periodoActual} y se abrirá ${siguientePeriodo(periodoActual)}. ¿Continuar?`)) return;
+  historialPeriodos.unshift({
+    periodo:periodoActual, fecha:new Date().toLocaleDateString("es-PA"),
+    empleados:empleados.length, bruto:t.bruto, neto:t.neto, css:t.css, se:t.se,
+    isr:t.isr, cargaPat:t.cargaPat, costoTotal:t.costoTotal, decimo:t.decimo
+  });
+  // La serie del dashboard avanza con el neto recién cerrado
+  histNeto.push(t.neto); if(histNeto.length>5) histNeto=histNeto.slice(-5);
+  periodoActual=siguientePeriodo(periodoActual);
+  actualizarPeriodoUI();
+  guardar();
+  anunciar(`Período cerrado. Ahora trabajando en ${periodoActual}`);
+  switchView("historial");
+}
+function actualizarPeriodoUI(){
+  const el=document.getElementById("periodLabel"); if(el) el.textContent=periodoActual;
+}
+
+/* ============ INIT ============ */
+cargar();
+cargarTema();
+actualizarPeriodoUI();
+actualizarUsuarioUI();
+construirMenu();
+document.getElementById("chipCo").textContent=empresa.nombre;
+document.getElementById("content").innerHTML=V.dashboard();
+
+</script>
+</body>
+</html>
