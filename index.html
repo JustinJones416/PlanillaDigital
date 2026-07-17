@@ -792,7 +792,10 @@ async function cargar(){
       }
       nubeDisponible = !huboError;
       if(!huboError && !rEmpresa.data){
-        // Base recién creada, sin datos todavía: se sube el ejemplo inicial para dejarla poblada.
+        // Base recién creada: se sube la nómina de ejemplo, pero NUNCA usuarios de acceso falsos,
+        // porque esas cuentas de ejemplo no tienen contraseña real y bloquearían que la primera
+        // persona que se registre de verdad quede como Administradora.
+        usuarios = [];
         actualizarEstadoNube("vacio");
         await guardar();
         return true;
@@ -859,6 +862,22 @@ function cargarTema(){
 /* ============ AUTENTICACIÓN (Supabase Auth) ============ */
 let sesionActual = null; // {id, email} del usuario autenticado en Supabase Auth
 
+// Traduce los mensajes técnicos de Supabase a algo claro para la persona.
+function traducirErrorAuth(msg){
+  if(!msg) return "Ocurrió un problema. Intenta de nuevo.";
+  const m=msg.toLowerCase();
+  if(m.includes("security purposes")||m.includes("only request this after")){
+    const seg=msg.match(/after (\d+) seconds/i);
+    return seg ? `Por seguridad, espera ${seg[1]} segundos antes de intentar de nuevo.` : "Por seguridad, espera unos segundos antes de intentar de nuevo.";
+  }
+  if(m.includes("already")||m.includes("registered")) return "Ese correo ya tiene una cuenta. Inicia sesión en su lugar.";
+  if(m.includes("invalid login")||m.includes("invalid_credentials")) return "Correo o contraseña incorrectos.";
+  if(m.includes("password")&&m.includes("least")) return "La contraseña debe tener al menos 6 caracteres.";
+  if(m.includes("email")&&m.includes("invalid")) return "Ese correo no parece válido.";
+  if(m.includes("network")||m.includes("fetch")) return "No se pudo conectar. Revisa tu internet e intenta de nuevo.";
+  return msg;
+}
+
 function mostrarAuthTab(tab){
   document.getElementById("tabLogin").classList.toggle("active", tab==="login");
   document.getElementById("tabRegistro").classList.toggle("active", tab==="registro");
@@ -875,7 +894,7 @@ async function iniciarSesion(ev){
   const btn=document.getElementById("btnLogin"); btn.disabled=true; btn.textContent="Entrando…";
   try{
     const {data,error} = await supa.auth.signInWithPassword({email:correo, password:clave});
-    if(error){ errBox.textContent="Correo o contraseña incorrectos."; btn.disabled=false; btn.textContent="Iniciar sesión"; return false; }
+    if(error){ errBox.textContent=traducirErrorAuth(error.message); btn.disabled=false; btn.textContent="Iniciar sesión"; return false; }
     await onSesionIniciada(data.user);
   }catch(e){ errBox.textContent="No se pudo conectar. Intenta de nuevo."; }
   btn.disabled=false; btn.textContent="Iniciar sesión";
@@ -884,25 +903,24 @@ async function iniciarSesion(ev){
 
 async function registrarse(ev){
   ev.preventDefault();
-  const errBox=document.getElementById("regError"); errBox.textContent="";
+  const errBox=document.getElementById("regError"); errBox.textContent=""; errBox.style.color="";
   if(!supa){ errBox.textContent="No hay conexión con el servidor. Verifica tu internet."; return false; }
   const nombre=document.getElementById("regNombre").value.trim();
   const correo=document.getElementById("regCorreo").value.trim();
   const clave=document.getElementById("regClave").value;
   const btn=document.getElementById("btnRegistro"); btn.disabled=true; btn.textContent="Creando cuenta…";
   try{
-    const {data,error} = await supa.auth.signUp({email:correo, password:clave});
-    if(error){ errBox.textContent=error.message.includes("already")?"Ese correo ya tiene una cuenta. Inicia sesión.":"No se pudo crear la cuenta: "+error.message; btn.disabled=false; btn.textContent="Crear cuenta"; return false; }
-    if(!data.user){ errBox.textContent="Revisa tu correo para confirmar la cuenta antes de entrar."; btn.disabled=false; btn.textContent="Crear cuenta"; return false; }
-    // ¿Ya existe un perfil con este correo (por ejemplo, precargado antes de tener cuenta de acceso)?
-    const {data:existente} = await supa.from("usuarios").select("id").eq("empresa_id",EMPRESA_DB_ID).ilike("correo",correo).maybeSingle();
-    if(!existente){
-      // ¿Es la primera persona del sistema? Si no hay ningún usuario aún, esta cuenta queda como Administrador.
-      const {count} = await supa.from("usuarios").select("*",{count:"exact",head:true}).eq("empresa_id",EMPRESA_DB_ID);
-      const rol = (!count || count===0) ? "admin" : "colaborador";
-      await supa.from("usuarios").insert({ id:Date.now()%2147483647, empresa_id:EMPRESA_DB_ID, nombre, correo,
-        contrasena_hash:"gestionada-por-supabase-auth", rol, activo:true });
+    const {data,error} = await supa.auth.signUp({email:correo, password:clave, options:{data:{nombre}}});
+    if(error){ errBox.textContent=traducirErrorAuth(error.message); btn.disabled=false; btn.textContent="Crear cuenta"; return false; }
+    if(!data.session){
+      // El proyecto exige confirmar el correo antes de dar acceso: aún no hay sesión real,
+      // así que no se toca la base de datos todavía (la seguridad RLS lo rechazaría de todos modos).
+      errBox.style.color="var(--green)";
+      errBox.textContent="Cuenta creada. Revisa tu correo, confirma tu cuenta y luego vuelve aquí para iniciar sesión.";
+      btn.disabled=false; btn.textContent="Crear cuenta";
+      return false;
     }
+    // La confirmación de correo está desactivada en el proyecto: ya hay sesión real de inmediato.
     await onSesionIniciada(data.user);
   }catch(e){ errBox.textContent="No se pudo crear la cuenta. Intenta de nuevo."; }
   btn.disabled=false; btn.textContent="Crear cuenta";
@@ -914,9 +932,18 @@ async function onSesionIniciada(user){
   document.getElementById("authScreen").style.display="none";
   document.getElementById("appRoot").style.display="";
   await cargar();
-  const yo = usuarios.find(u=>u.correo && u.correo.toLowerCase()===user.email.toLowerCase());
+  let yo = usuarios.find(u=>u.correo && u.correo.toLowerCase()===user.email.toLowerCase());
+  if(!yo && usuarios.length===0){
+    // Nadie ha usado el sistema todavía: esta persona, ya con sesión real y confirmada,
+    // queda como la primera Administradora. Aquí sí se puede escribir porque la sesión es válida.
+    const nombre = (user.user_metadata&&user.user_metadata.nombre) || user.email.split("@")[0];
+    const nuevoId = Date.now()%2147483647;
+    const {error} = await supa.from("usuarios").insert({ id:nuevoId, empresa_id:EMPRESA_DB_ID, nombre,
+      correo:user.email, contrasena_hash:"gestionada-por-supabase-auth", rol:"admin", activo:true });
+    if(!error){ usuarios.push({id:nuevoId, nombre, correo:user.email, rol:"admin"}); yo=usuarios[usuarios.length-1]; }
+  }
   if(!yo){
-    // Tiene cuenta de acceso pero ningún administrador le asignó un perfil todavía.
+    // Tiene cuenta de acceso confirmada, pero ningún administrador le asignó un perfil todavía.
     await cerrarSesion();
     const errBox=document.getElementById("loginError");
     if(errBox) errBox.textContent="Tu cuenta no tiene un perfil asignado en el sistema. Pide a un administrador que te agregue en Usuarios y roles.";
@@ -2122,7 +2149,7 @@ async function guardarUsuario(id){
   try{
     const clienteTemporal = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const {data,error} = await clienteTemporal.auth.signUp({email:correo, password:clave});
-    if(error){ errBox.textContent="No se pudo crear el acceso: "+error.message; btn.disabled=false; btn.textContent="Crear usuario"; return; }
+    if(error){ errBox.textContent="No se pudo crear el acceso: "+traducirErrorAuth(error.message); btn.disabled=false; btn.textContent="Crear usuario"; return; }
     usuarios.push({id:nextUsuarioId++, nombre, rol, correo});
     guardar(); cerrarModal(); anunciar("Usuario creado con su cuenta de acceso"); switchView("usuarios");
   }catch(e){ errBox.textContent="No se pudo crear el usuario. Intenta de nuevo."; btn.disabled=false; btn.textContent="Crear usuario"; }
