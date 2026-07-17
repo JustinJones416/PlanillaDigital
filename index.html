@@ -546,6 +546,7 @@ let solicitudesVac = [     // solicitudes de vacaciones
 ];
 let nextSolId = 4;
 let liquidaciones = [];    // liquidaciones ejecutadas (histórico)
+let nextLiqId = 1;
 // Comentarios, advertencias y amonestaciones adjudicadas a colaboradores
 let amonestaciones = [
   {id:1, empId:4, fecha:"2026-06-10", tipo:"verbal", gravedad:"leve", asunto:"Llegadas tarde reiteradas", detalle:"Se conversó sobre tres llegadas tarde en la semana. El colaborador se comprometió a mejorar la puntualidad.", autor:"Supervisión"},
@@ -584,12 +585,13 @@ let wizardData = {};
 
 // Período de trabajo actual y archivo de períodos cerrados
 let periodoActual = "Julio 2026";
-let historialPeriodos = []; // [{periodo, fecha, empleados, bruto, neto, css, se, isr, cargaPat, costoTotal, decimo}]
+let historialPeriodos = []; // [{id, periodo, fecha, empleados, bruto, neto, css, se, isr, cargaPat, costoTotal, decimo}]
+let nextHistId = 1;
 
-/* ============ PERSISTENCIA EN LA NUBE (SUPABASE) ============ */
+/* ============ PERSISTENCIA EN LA NUBE (SUPABASE — 8 TABLAS RELACIONALES) ============ */
 const SUPABASE_URL = "https://kifewjctpyxhvjpzwzzb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_aByxVY1YrWhsVcYa_To_Ow_rNJVYowU";
-const EMPRESA_ID = "empresa-demo"; // identificador del paquete de datos en la nube
+const EMPRESA_DB_ID = 1; // fila fija de la tabla "empresas" para esta instancia (una sola empresa por ahora)
 
 let supa = null;
 try{ supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }catch(e){ supa=null; }
@@ -597,14 +599,13 @@ try{ supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }catch(e){
 // Respaldo local: si la nube no responde, no se pierde el trabajo del usuario.
 const DB_KEY = "planilladigital_v2";
 let dbDisponible = (()=>{ try{ const k="__t"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }catch(e){ return false; } })();
-let nubeDisponible = !!supa;  // se confirma en el primer intento real de guardar/cargar
+let nubeDisponible = !!supa;
 let ultimoEstadoNube = "verificando";
-let guardando = false;
 
 function empaquetarEstado(){
   return { empresa, empleados, nextId, histNeto, periodoActual, historialPeriodos,
     bajas, solicitudesVac, nextSolId, liquidaciones, amonestaciones, nextAmonId,
-    usuarios, usuarioActivoId, nextUsuarioId };
+    usuarios, usuarioActivoId, nextUsuarioId, nextLiqId, nextHistId };
 }
 function desempaquetarEstado(d){
   if(!d) return;
@@ -623,31 +624,134 @@ function desempaquetarEstado(d){
   if(Array.isArray(d.usuarios)) usuarios=d.usuarios;
   if(d.usuarioActivoId) usuarioActivoId=d.usuarioActivoId;
   if(d.nextUsuarioId) nextUsuarioId=d.nextUsuarioId;
+  if(d.nextLiqId) nextLiqId=d.nextLiqId;
+  if(d.nextHistId) nextHistId=d.nextHistId;
 }
 
-// Guarda en la nube; si falla, respalda en este navegador para no perder el cambio.
-async function guardar(){
+/* --- Traducción entre los objetos de la app (camelCase) y las columnas de las tablas (snake_case) --- */
+const mapEmpleadoADB = e => ({ id:e.id, empresa_id:EMPRESA_DB_ID, nombre:e.nombre, cedula:e.cedula, cargo:e.cargo,
+  salario:+e.salario||0, bono:+e.bono||0, extras:+e.extras||0, otros:+e.otros||0,
+  fecha_ingreso:e.ingreso||null, vac_gozadas:+e.vacGozadas||0, contrato:!!e.contrato });
+const mapEmpleadoDeDB = r => ({ id:r.id, nombre:r.nombre, cedula:r.cedula, cargo:r.cargo,
+  salario:+r.salario, bono:+r.bono, extras:+r.extras, otros:+r.otros,
+  ingreso:r.fecha_ingreso, vacGozadas:+r.vac_gozadas, contrato:!!r.contrato });
+
+const mapUsuarioADB = u => ({ id:u.id, empresa_id:EMPRESA_DB_ID, nombre:u.nombre, correo:u.correo||`usuario${u.id}@pendiente.pa`,
+  contrasena_hash:u.contrasena_hash||"sin-autenticacion-aun", rol:u.rol, activo:true });
+const mapUsuarioDeDB = r => ({ id:r.id, nombre:r.nombre, correo:r.correo, rol:r.rol });
+
+const mapSolADB = s => ({ id:s.id, empresa_id:EMPRESA_DB_ID, empleado_id:s.empId, fecha_inicio:s.inicio,
+  fecha_fin:s.fin, dias:+s.dias||0, estado:s.estado, motivo:s.motivo||null });
+const mapSolDeDB = r => ({ id:r.id, empId:r.empleado_id, inicio:r.fecha_inicio, fin:r.fecha_fin,
+  dias:+r.dias, estado:r.estado, motivo:r.motivo });
+
+const mapAmonADB = a => ({ id:a.id, empresa_id:EMPRESA_DB_ID, empleado_id:empById(a.empId)?a.empId:null,
+  nombre_arch:a.nombreArch||null, cargo_arch:a.cargoArch||null, cedula_arch:a.cedulaArch||null,
+  fecha:a.fecha, tipo:a.tipo, gravedad:a.gravedad, asunto:a.asunto, detalle:a.detalle||null, autor:a.autor||null });
+const mapAmonDeDB = r => ({ id:r.id, empId:r.empleado_id, nombreArch:r.nombre_arch, cargoArch:r.cargo_arch,
+  cedulaArch:r.cedula_arch, fecha:r.fecha, tipo:r.tipo, gravedad:r.gravedad, asunto:r.asunto, detalle:r.detalle, autor:r.autor });
+
+const mapBajaADB = b => ({ id:b.id, empresa_id:EMPRESA_DB_ID, empleado_ref:b.id, nombre:b.nombre, cedula:b.cedula,
+  cargo:b.cargo, salario:+b.salario||0, fecha_ingreso:b.ingreso||null, baja_fecha:b.bajaFecha,
+  baja_motivo:b.bajaMotivo||null, liquidacion_total:+b.liquidacionTotal||0 });
+const mapBajaDeDB = r => ({ id:r.id, nombre:r.nombre, cedula:r.cedula, cargo:r.cargo, salario:+r.salario,
+  ingreso:r.fecha_ingreso, bajaFecha:r.baja_fecha, bajaMotivo:r.baja_motivo, liquidacionTotal:+r.liquidacion_total });
+
+const mapLiqADB = l => ({ id:l.id, empresa_id:EMPRESA_DB_ID, empleado_ref:l.empId, nombre:l.nombre, cedula:l.cedula,
+  cargo:l.cargo, fecha:l.fecha, motivo:l.motivo, anios:+l.años||0, prima_antiguedad:+l.primaAntiguedad||0,
+  decimo_proporcional:+l.decimoProporcional||0, vac_proporcional:+l.vacProporcional||0,
+  indemnizacion:+l.indemnizacion||0, total:+l.total||0 });
+const mapLiqDeDB = r => ({ id:r.id, empId:r.empleado_ref, nombre:r.nombre, cedula:r.cedula, cargo:r.cargo,
+  fecha:r.fecha, motivo:r.motivo,
+  motivoTxt:{renuncia:"Renuncia o mutuo acuerdo",justificado:"Despido justificado",injustificado:"Despido injustificado"}[r.motivo]||r.motivo,
+  años:+r.anios, primaAntiguedad:+r.prima_antiguedad, decimoProporcional:+r.decimo_proporcional,
+  vacProporcional:+r.vac_proporcional, indemnizacion:+r.indemnizacion, total:+r.total });
+
+const mapHistADB = h => ({ id:h.id, empresa_id:EMPRESA_DB_ID, periodo:h.periodo, fecha_cierre:h.fecha,
+  empleados:+h.empleados||0, bruto:+h.bruto||0, neto:+h.neto||0, css:+h.css||0, seguro_educ:+h.se||0,
+  isr:+h.isr||0, carga_patronal:+h.cargaPat||0, costo_total:+h.costoTotal||0, decimo:+h.decimo||0 });
+const mapHistDeDB = r => ({ id:r.id, periodo:r.periodo, fecha:r.fecha_cierre, empleados:+r.empleados,
+  bruto:+r.bruto, neto:+r.neto, css:+r.css, se:+r.seguro_educ, isr:+r.isr, cargaPat:+r.carga_patronal,
+  costoTotal:+r.costo_total, decimo:+r.decimo });
+
+// Reemplaza todas las filas de una tabla (de esta empresa) por el contenido actual del arreglo.
+async function sincronizarTabla(tabla, filas, mapeo){
+  await supa.from(tabla).delete().eq("empresa_id", EMPRESA_DB_ID);
+  if(filas.length) await supa.from(tabla).insert(filas.map(mapeo));
+}
+
+// Guarda en la nube (8 tablas relacionales); si falla, respalda en este navegador.
+// Los guardados se encolan uno tras otro; si dos acciones disparan guardar() casi
+// al mismo tiempo, el segundo espera a que termine el primero en vez de chocar con él.
+let colaGuardado = Promise.resolve();
+function guardar(){
+  colaGuardado = colaGuardado.then(()=>guardarInterno()).catch(()=>{});
+  return colaGuardado;
+}
+async function guardarInterno(){
   const estado=empaquetarEstado();
   if(dbDisponible){ try{ localStorage.setItem(DB_KEY, JSON.stringify(estado)); }catch(e){} }
   if(!supa) return;
-  guardando=true; actualizarEstadoNube("guardando");
+  actualizarEstadoNube("guardando");
   try{
-    const {error} = await supa.from("app_state").upsert({
-      id:EMPRESA_ID, data:estado, actualizado:new Date().toISOString()
-    });
-    nubeDisponible = !error;
-    actualizarEstadoNube(error?"error":"ok");
+    await supa.from("empresas").upsert({ id:EMPRESA_DB_ID, nombre:empresa.nombre, ruc:empresa.ruc,
+      dv:empresa.dv, actividad:empresa.actividad, direccion:empresa.direccion, correo:empresa.correo,
+      riesgo_ciiu:+empresa.riesgoCIIU||1.05, periodo_actual:periodoActual });
+    // Orden: primero los padres (empleados, usuarios), luego los que dependen de ellos.
+    await sincronizarTabla("empleados", empleados, mapEmpleadoADB);
+    await sincronizarTabla("usuarios", usuarios, mapUsuarioADB);
+    await sincronizarTabla("solicitudes_vacaciones", solicitudesVac, mapSolADB);
+    await sincronizarTabla("amonestaciones", amonestaciones, mapAmonADB);
+    await sincronizarTabla("bajas", bajas, mapBajaADB);
+    await sincronizarTabla("liquidaciones", liquidaciones, mapLiqADB);
+    await sincronizarTabla("historial_periodos", historialPeriodos, mapHistADB);
+    nubeDisponible=true; actualizarEstadoNube("ok");
   }catch(e){ nubeDisponible=false; actualizarEstadoNube("error"); }
-  guardando=false;
 }
 
-// Carga primero desde la nube; si no hay conexión, usa el respaldo local.
+// Carga desde la nube (8 tablas); si no hay conexión, usa el respaldo local.
 async function cargar(){
   if(supa){
     try{
-      const {data,error} = await supa.from("app_state").select("data").eq("id",EMPRESA_ID).maybeSingle();
-      if(!error && data && data.data){ desempaquetarEstado(data.data); nubeDisponible=true; actualizarEstadoNube("ok"); return true; }
-      nubeDisponible = !error;
+      const [rEmpresa, rEmpleados, rUsuarios, rSol, rAmo, rBaja, rLiq, rHist] = await Promise.all([
+        supa.from("empresas").select("*").eq("id",EMPRESA_DB_ID).maybeSingle(),
+        supa.from("empleados").select("*").eq("empresa_id",EMPRESA_DB_ID),
+        supa.from("usuarios").select("*").eq("empresa_id",EMPRESA_DB_ID),
+        supa.from("solicitudes_vacaciones").select("*").eq("empresa_id",EMPRESA_DB_ID),
+        supa.from("amonestaciones").select("*").eq("empresa_id",EMPRESA_DB_ID),
+        supa.from("bajas").select("*").eq("empresa_id",EMPRESA_DB_ID),
+        supa.from("liquidaciones").select("*").eq("empresa_id",EMPRESA_DB_ID),
+        supa.from("historial_periodos").select("*").eq("empresa_id",EMPRESA_DB_ID),
+      ]);
+      const resultados=[rEmpresa,rEmpleados,rUsuarios,rSol,rAmo,rBaja,rLiq,rHist];
+      const huboError = resultados.some(r=>r.error);
+      if(!huboError && rEmpresa.data){
+        empresa = { nombre:rEmpresa.data.nombre, ruc:rEmpresa.data.ruc, dv:rEmpresa.data.dv,
+          actividad:rEmpresa.data.actividad, direccion:rEmpresa.data.direccion, correo:rEmpresa.data.correo,
+          riesgoCIIU:+rEmpresa.data.riesgo_ciiu };
+        periodoActual = rEmpresa.data.periodo_actual||periodoActual;
+        empleados = (rEmpleados.data||[]).map(mapEmpleadoDeDB);
+        usuarios = (rUsuarios.data||[]).map(mapUsuarioDeDB);
+        solicitudesVac = (rSol.data||[]).map(mapSolDeDB);
+        amonestaciones = (rAmo.data||[]).map(mapAmonDeDB);
+        bajas = (rBaja.data||[]).map(mapBajaDeDB);
+        liquidaciones = (rLiq.data||[]).map(mapLiqDeDB);
+        historialPeriodos = (rHist.data||[]).map(mapHistDeDB);
+        // Los contadores de "siguiente id" se recalculan a partir de lo cargado, para no repetir ids.
+        const maxId = arr => arr.length ? Math.max(...arr.map(x=>x.id||0))+1 : 1;
+        nextId=maxId(empleados); nextUsuarioId=maxId(usuarios); nextSolId=maxId(solicitudesVac);
+        nextAmonId=maxId(amonestaciones); nextLiqId=maxId(liquidaciones); nextHistId=maxId(historialPeriodos);
+        if(usuarios.length && !usuarios.some(u=>u.id===usuarioActivoId)) usuarioActivoId=usuarios[0].id;
+        nubeDisponible=true; actualizarEstadoNube("ok");
+        return true;
+      }
+      nubeDisponible = !huboError;
+      if(!huboError && !rEmpresa.data){
+        // Base recién creada, sin datos todavía: se sube el ejemplo inicial para dejarla poblada.
+        actualizarEstadoNube("vacio");
+        await guardar();
+        return true;
+      }
     }catch(e){ nubeDisponible=false; }
   }
   actualizarEstadoNube(nubeDisponible?"vacio":"error");
@@ -673,7 +777,7 @@ async function verificarConexionNube(){
   if(!supa){ actualizarEstadoNube("error"); return; }
   actualizarEstadoNube("guardando");
   try{
-    const {error} = await supa.from("app_state").select("id").eq("id",EMPRESA_ID).maybeSingle();
+    const {error} = await supa.from("empresas").select("id").eq("id",EMPRESA_DB_ID).maybeSingle();
     actualizarEstadoNube(error?"error":"ok");
   }catch(e){ actualizarEstadoNube("error"); }
 }
@@ -1740,7 +1844,7 @@ V.historial = ()=>{
       <div class="bar" style="height:${t.costoTotal/maxCosto*100}%;background:linear-gradient(180deg,var(--navy),var(--blue))" title="${periodoActual}: ${fmt0(t.costoTotal)}"></div>
       <div class="bar-lbl">${periodoActual.split(" ")[0].slice(0,3)}*</div></div>`;
   const rows=historialPeriodos.map(p=>`<tr>
-    <td><b>${p.periodo}</b><div class="mini">Cerrado el ${p.fecha}</div></td>
+    <td><b>${p.periodo}</b><div class="mini">Cerrado el ${fmtFecha(p.fecha)}</div></td>
     <td class="num">${p.empleados}</td>
     <td class="num">${fmt(p.bruto)}</td>
     <td class="num" style="color:var(--green)">${fmt(p.neto)}</td>
@@ -2070,7 +2174,7 @@ function ejecutarTerminacion(id){
   const l=liquidacion(e,motivo);
   const motivoTxt={renuncia:"Renuncia o mutuo acuerdo",justificado:"Despido justificado",injustificado:"Despido injustificado"}[motivo];
   liquidaciones.unshift({
-    id:Date.now(), empId:e.id, nombre:e.nombre, cargo:e.cargo, cedula:e.cedula,
+    id:nextLiqId++, empId:e.id, nombre:e.nombre, cargo:e.cargo, cedula:e.cedula,
     fecha, motivo, motivoTxt, años:l.años,
     primaAntiguedad:l.primaAntiguedad, decimoProporcional:l.decimoProporcional,
     vacProporcional:l.vacProporcional, indemnizacion:l.indemnizacion, total:l.total
@@ -2206,7 +2310,7 @@ function cerrarPeriodo(){
   if(empleados.length===0){ alert("No hay colaboradores en la planilla para cerrar el período."); return; }
   if(!confirm(`Se archivará la planilla de ${periodoActual} y se abrirá ${siguientePeriodo(periodoActual)}. ¿Continuar?`)) return;
   historialPeriodos.unshift({
-    periodo:periodoActual, fecha:new Date().toLocaleDateString("es-PA"),
+    id:nextHistId++, periodo:periodoActual, fecha:new Date().toISOString().slice(0,10),
     empleados:empleados.length, bruto:t.bruto, neto:t.neto, css:t.css, se:t.se,
     isr:t.isr, cargaPat:t.cargaPat, costoTotal:t.costoTotal, decimo:t.decimo
   });
