@@ -457,6 +457,7 @@
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/umd/supabase.js"></script>
 </head>
 <body>
 <a href="#content" class="skip-link">Saltar al contenido principal</a>
@@ -585,49 +586,92 @@ let wizardData = {};
 let periodoActual = "Julio 2026";
 let historialPeriodos = []; // [{periodo, fecha, empleados, bruto, neto, css, se, isr, cargaPat, costoTotal, decimo}]
 
-/* ============ PERSISTENCIA LOCAL ============ */
+/* ============ PERSISTENCIA EN LA NUBE (SUPABASE) ============ */
+const SUPABASE_URL = "https://kifewjctpyxhvjpzwzzb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_aByxVY1YrWhsVcYa_To_Ow_rNJVYowU";
+const EMPRESA_ID = "empresa-demo"; // identificador del paquete de datos en la nube
+
+let supa = null;
+try{ supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }catch(e){ supa=null; }
+
+// Respaldo local: si la nube no responde, no se pierde el trabajo del usuario.
 const DB_KEY = "planilladigital_v2";
 let dbDisponible = (()=>{ try{ const k="__t"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }catch(e){ return false; } })();
+let nubeDisponible = !!supa;  // se confirma en el primer intento real de guardar/cargar
+let guardando = false;
 
-function guardar(){
-  if(!dbDisponible) return;
-  try{
-    localStorage.setItem(DB_KEY, JSON.stringify({
-      empresa, empleados, nextId, histNeto, periodoActual, historialPeriodos,
-      bajas, solicitudesVac, nextSolId, liquidaciones, amonestaciones, nextAmonId,
-      usuarios, usuarioActivoId, nextUsuarioId
-    }));
-  }catch(e){ /* almacenamiento lleno o no disponible */ }
+function empaquetarEstado(){
+  return { empresa, empleados, nextId, histNeto, periodoActual, historialPeriodos,
+    bajas, solicitudesVac, nextSolId, liquidaciones, amonestaciones, nextAmonId,
+    usuarios, usuarioActivoId, nextUsuarioId };
 }
-function cargar(){
+function desempaquetarEstado(d){
+  if(!d) return;
+  if(d.empresa) empresa=d.empresa;
+  if(Array.isArray(d.empleados)) empleados=d.empleados;
+  if(d.nextId) nextId=d.nextId;
+  if(Array.isArray(d.histNeto)) histNeto=d.histNeto;
+  if(d.periodoActual) periodoActual=d.periodoActual;
+  if(Array.isArray(d.historialPeriodos)) historialPeriodos=d.historialPeriodos;
+  if(Array.isArray(d.bajas)) bajas=d.bajas;
+  if(Array.isArray(d.solicitudesVac)) solicitudesVac=d.solicitudesVac;
+  if(d.nextSolId) nextSolId=d.nextSolId;
+  if(Array.isArray(d.liquidaciones)) liquidaciones=d.liquidaciones;
+  if(Array.isArray(d.amonestaciones)) amonestaciones=d.amonestaciones;
+  if(d.nextAmonId) nextAmonId=d.nextAmonId;
+  if(Array.isArray(d.usuarios)) usuarios=d.usuarios;
+  if(d.usuarioActivoId) usuarioActivoId=d.usuarioActivoId;
+  if(d.nextUsuarioId) nextUsuarioId=d.nextUsuarioId;
+}
+
+// Guarda en la nube; si falla, respalda en este navegador para no perder el cambio.
+async function guardar(){
+  const estado=empaquetarEstado();
+  if(dbDisponible){ try{ localStorage.setItem(DB_KEY, JSON.stringify(estado)); }catch(e){} }
+  if(!supa) return;
+  guardando=true; actualizarEstadoNube("guardando");
+  try{
+    const {error} = await supa.from("app_state").upsert({
+      id:EMPRESA_ID, data:estado, actualizado:new Date().toISOString()
+    });
+    nubeDisponible = !error;
+    actualizarEstadoNube(error?"error":"ok");
+  }catch(e){ nubeDisponible=false; actualizarEstadoNube("error"); }
+  guardando=false;
+}
+
+// Carga primero desde la nube; si no hay conexión, usa el respaldo local.
+async function cargar(){
+  if(supa){
+    try{
+      const {data,error} = await supa.from("app_state").select("data").eq("id",EMPRESA_ID).maybeSingle();
+      if(!error && data && data.data){ desempaquetarEstado(data.data); nubeDisponible=true; actualizarEstadoNube("ok"); return true; }
+      nubeDisponible = !error;
+    }catch(e){ nubeDisponible=false; }
+  }
+  actualizarEstadoNube(nubeDisponible?"vacio":"error");
   if(!dbDisponible) return false;
   try{
     const raw=localStorage.getItem(DB_KEY);
     if(!raw) return false;
-    const d=JSON.parse(raw);
-    if(d.empresa) empresa=d.empresa;
-    if(Array.isArray(d.empleados)) empleados=d.empleados;
-    if(d.nextId) nextId=d.nextId;
-    if(Array.isArray(d.histNeto)) histNeto=d.histNeto;
-    if(d.periodoActual) periodoActual=d.periodoActual;
-    if(Array.isArray(d.historialPeriodos)) historialPeriodos=d.historialPeriodos;
-    if(Array.isArray(d.bajas)) bajas=d.bajas;
-    if(Array.isArray(d.solicitudesVac)) solicitudesVac=d.solicitudesVac;
-    if(d.nextSolId) nextSolId=d.nextSolId;
-    if(Array.isArray(d.liquidaciones)) liquidaciones=d.liquidaciones;
-    if(Array.isArray(d.amonestaciones)) amonestaciones=d.amonestaciones;
-    if(d.nextAmonId) nextAmonId=d.nextAmonId;
-    if(Array.isArray(d.usuarios)) usuarios=d.usuarios;
-    if(d.usuarioActivoId) usuarioActivoId=d.usuarioActivoId;
-    if(d.nextUsuarioId) nextUsuarioId=d.nextUsuarioId;
+    desempaquetarEstado(JSON.parse(raw));
     return true;
   }catch(e){ return false; }
 }
-function reiniciarDatos(){
-  if(!confirm("Esto borrará todos los datos guardados y restaurará el ejemplo inicial. ¿Continuar?")) return;
-  if(dbDisponible) localStorage.removeItem(DB_KEY);
-  location.reload();
+function actualizarEstadoNube(estado){
+  const el=document.getElementById("nubeEstado"); if(!el) return;
+  const map={ok:["Sincronizado con la nube","ok"], guardando:["Guardando…","pend"],
+    error:["Sin conexión a la nube · usando este dispositivo","warn"], vacio:["Conectado · sin datos previos en la nube","ok"]};
+  const [txt,cls]=map[estado]||["",""];
+  el.textContent=txt; el.className="tag "+cls;
 }
+function reiniciarDatos(){
+  if(!confirm("Esto borrará todos los datos guardados (incluida la nube) y restaurará el ejemplo inicial. ¿Continuar?")) return;
+  if(dbDisponible) localStorage.removeItem(DB_KEY);
+  if(supa) supa.from("app_state").delete().eq("id",EMPRESA_ID).then(()=>location.reload());
+  else location.reload();
+}
+
 
 /* ============ TEMA (MODO OSCURO) ============ */
 const TEMA_KEY = "planilladigital_tema";
@@ -1263,11 +1307,11 @@ V.empresa = ()=>{
       <tr><td>Reportes, resumen SIPE e historial de períodos</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
       <tr><td>Exportación de datos a CSV</td><td style="text-align:right"><span class="tag ok">Incluido</span></td></tr>
     </tbody></table></div></div>
-  <div class="card" style="max-width:760px"><div class="card-h"><h3>Gestión de datos</h3><span class="hint">Almacenamiento en este dispositivo</span></div>
+  <div class="card" style="max-width:760px"><div class="card-h"><h3>Gestión de datos</h3><span class="hint">Almacenamiento en la nube (Supabase)</span></div>
     <div class="card-b">
-      <p style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:14px">${dbDisponible?"Los cambios se guardan automáticamente en este navegador. La información permanece disponible al volver a abrir la aplicación, sin enviarse a ningún servidor externo.":"El navegador no permite el guardado automático en este momento. Los cambios se mantendrán solo durante esta sesión."}</p>
+      <p style="font-size:13px;color:var(--gray);line-height:1.6;margin-bottom:14px">${supa?"Los cambios se guardan automáticamente en tu base de datos en la nube y quedan disponibles desde cualquier dispositivo. Si se pierde la conexión, este navegador guarda un respaldo temporal.":"No hay conexión configurada con la nube en este momento. Los cambios se guardan solo en este navegador."}</p>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="tag ${dbDisponible?'ok':'warn'}">${dbDisponible?'Guardado automático activo':'Solo en memoria'}</span>
+        <span class="tag" id="nubeEstado">Verificando conexión…</span>
         <button class="btn btn-ghost btn-sm" onclick="reiniciarDatos()" style="color:var(--red)" aria-label="Reiniciar todos los datos"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Reiniciar datos</button>
       </div>
     </div></div>`;
@@ -2166,13 +2210,15 @@ function actualizarPeriodoUI(){
 }
 
 /* ============ INIT ============ */
-cargar();
-cargarTema();
-actualizarPeriodoUI();
-actualizarUsuarioUI();
-construirMenu();
-document.getElementById("chipCo").textContent=empresa.nombre;
-document.getElementById("content").innerHTML=V.dashboard();
+(async function iniciar(){
+  cargarTema(); // el tema no depende de la nube, se aplica de inmediato
+  await cargar();
+  actualizarPeriodoUI();
+  actualizarUsuarioUI();
+  construirMenu();
+  document.getElementById("chipCo").textContent=empresa.nombre;
+  document.getElementById("content").innerHTML=V.dashboard();
+})();
 
 </script>
 </body>
