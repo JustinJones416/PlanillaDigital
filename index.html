@@ -461,6 +461,16 @@
   .auth-form .field{margin-bottom:14px}
   .auth-error{font-size:12.5px;color:var(--red);min-height:16px;margin-bottom:6px}
 
+  .auth-card .brand{padding:0;border-bottom:none;justify-content:center;margin-bottom:6px}
+  .auth-card .brand-name{color:var(--navy)}
+  [data-theme="dark"] .auth-card .brand-name{color:var(--ink)}
+  .auth-tagline{text-align:center;font-size:12.5px;color:var(--gray);margin-bottom:26px;letter-spacing:.2px}
+  .auth-screen::before{content:"";position:absolute;top:0;left:0;right:0;height:6px;
+    background:linear-gradient(90deg,var(--navy),var(--blue),var(--gold))}
+  .auth-badge-row{display:flex;justify-content:center;gap:18px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+  .auth-badge{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;color:var(--gray);text-align:center}
+  .auth-badge .ic{color:var(--blue)}
+
   /* ===== IMPRESIÓN / PDF ===== */
   @media print{
     @page{margin:14mm}
@@ -479,10 +489,11 @@
 
 <div id="authScreen" class="auth-screen">
   <div class="auth-card">
-    <div class="brand" style="justify-content:center;margin-bottom:22px">
+    <div class="brand">
       <div class="brand-logo">P</div>
       <div class="brand-name">Planilla<span>Digital</span></div>
     </div>
+    <p class="auth-tagline">Nómina, prestaciones y cumplimiento laboral de Panamá, en un solo lugar</p>
     <div id="authTabs" class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="mostrarAuthTab('login')">Iniciar sesión</button>
       <button class="auth-tab" id="tabRegistro" onclick="mostrarAuthTab('registro')">Crear cuenta</button>
@@ -496,14 +507,30 @@
     </form>
 
     <form id="formRegistro" class="auth-form" style="display:none" onsubmit="return registrarse(event)">
-      <p class="mini" style="margin-bottom:14px;color:var(--gray)">La primera persona en registrarse queda como Administrador. Cualquier otra cuenta debe ser creada después por un administrador desde Usuarios y roles.</p>
-      <div class="field"><label for="regNombre">Nombre completo</label><input id="regNombre" required></div>
+      <p class="mini" style="margin-bottom:14px;color:var(--gray)">Al registrarte creas tu propia empresa en el sistema, separada de cualquier otra. Quedará pendiente de aprobación antes de poder usarse.</p>
+      <div class="field"><label for="regEmpresa">Nombre de tu empresa</label><input id="regEmpresa" required placeholder="Ej. Mi Empresa, S.A."></div>
+      <div class="field"><label for="regNombre">Tu nombre completo</label><input id="regNombre" required></div>
       <div class="field"><label for="regCorreo">Correo</label><input id="regCorreo" type="email" required autocomplete="username"></div>
       <div class="field"><label for="regClave">Contraseña</label><input id="regClave" type="password" required minlength="6" autocomplete="new-password"></div>
       <div id="regError" class="auth-error" role="alert" aria-live="polite"></div>
-      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="btnRegistro">Crear cuenta</button>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="btnRegistro">Crear cuenta y empresa</button>
     </form>
-    <p class="mini" style="text-align:center;margin-top:16px;color:var(--gray)" id="authSub">Acceso protegido · los datos viven en tu base de Supabase</p>
+    <p class="mini" style="text-align:center;margin-top:16px;color:var(--gray)" id="authSub">Acceso protegido · los datos viven en tu base de datos en la nube</p>
+    <div class="auth-badge-row">
+      <div class="auth-badge"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Datos cifrados</div>
+      <div class="auth-badge"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>Ley panameña</div>
+      <div class="auth-badge"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Nube 24/7</div>
+    </div>
+  </div>
+</div>
+
+<div id="pendienteScreen" class="auth-screen" style="display:none">
+  <div class="auth-card" style="text-align:center">
+    <div class="brand"><div class="brand-logo">P</div><div class="brand-name">Planilla<span>Digital</span></div></div>
+    <div class="comp-ic warn" style="width:56px;height:56px;margin:22px auto 16px"><svg class="ic" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+    <h2 style="color:var(--navy);font-size:17px;margin-bottom:10px" id="pendienteTitulo">Tu empresa está pendiente de aprobación</h2>
+    <p class="mini" style="color:var(--gray);line-height:1.6;margin-bottom:22px" id="pendienteTexto">Ya creamos tu cuenta y tu empresa en el sistema. Un administrador revisará tu solicitud antes de darte acceso completo. Te avisaremos por correo.</p>
+    <button class="btn btn-ghost" onclick="cerrarSesion()" style="width:100%;justify-content:center">Cerrar sesión</button>
   </div>
 </div>
 
@@ -535,6 +562,7 @@
       <button class="nav-item" data-view="empresa" data-grupo="Análisis"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9" y2="9"/><line x1="9" y1="13" x2="9" y2="13"/></svg>Datos de la empresa</button>
       <div class="nav-label" data-grupo-label="Administración">Administración</div>
       <button class="nav-item" data-view="usuarios" data-grupo="Administración"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Usuarios y roles</button>
+      <button class="nav-item" data-view="aprobaciones" data-grupo="Administración"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>Empresas y aprobaciones</button>
     </nav>
     <div class="sidebar-foot">Tu nómina, más simple.<br>© 2026 PlanillaDigital</div>
   </aside>
@@ -622,7 +650,7 @@ let usuarioActivoId = 1;
 let nextUsuarioId = 4;
 function usuarioActivo(){ return usuarios.find(u=>u.id===usuarioActivoId)||usuarios[0]; }
 function rolActivo(){ return usuarioActivo()?.rol||"admin"; }
-function puedeVer(vista){ return (PERMISOS[rolActivo()]||[]).includes(vista); }
+function puedeVer(vista){ if(vista==="aprobaciones") return esSuperadmin(); return (PERMISOS[rolActivo()]||[]).includes(vista); }
 let nextId = 6;
 let histNeto = [4980, 5180, 5340, 5510, 5690];
 let wizardStep = 1;
@@ -636,7 +664,9 @@ let nextHistId = 1;
 /* ============ PERSISTENCIA EN LA NUBE (SUPABASE — 8 TABLAS RELACIONALES) ============ */
 const SUPABASE_URL = "https://kifewjctpyxhvjpzwzzb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_aByxVY1YrWhsVcYa_To_Ow_rNJVYowU";
-const EMPRESA_DB_ID = 1; // fila fija de la tabla "empresas" para esta instancia (una sola empresa por ahora)
+let EMPRESA_DB_ID = null; // se determina al iniciar sesión: cada empresa tiene su propio id
+const SUPERADMIN_EMAILS = ["justinjones2018@outlook.es"]; // dueños del sistema, aprueban empresas nuevas
+function esSuperadmin(){ return !!(sesionActual && SUPERADMIN_EMAILS.includes((sesionActual.email||"").toLowerCase())); }
 
 let supa = null;
 try{ supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }catch(e){ supa=null; }
@@ -682,8 +712,8 @@ const mapEmpleadoDeDB = r => ({ id:r.id, nombre:r.nombre, cedula:r.cedula, cargo
   ingreso:r.fecha_ingreso, vacGozadas:+r.vac_gozadas, contrato:!!r.contrato });
 
 const mapUsuarioADB = u => ({ id:u.id, empresa_id:EMPRESA_DB_ID, nombre:u.nombre, correo:u.correo||`usuario${u.id}@pendiente.pa`,
-  contrasena_hash:u.contrasena_hash||"sin-autenticacion-aun", rol:u.rol, activo:true });
-const mapUsuarioDeDB = r => ({ id:r.id, nombre:r.nombre, correo:r.correo, rol:r.rol });
+  contrasena_hash:u.contrasena_hash||"sin-autenticacion-aun", rol:u.rol, activo:true, auth_id:u.authId||null });
+const mapUsuarioDeDB = r => ({ id:r.id, nombre:r.nombre, correo:r.correo, rol:r.rol, authId:r.auth_id });
 
 const mapSolADB = s => ({ id:s.id, empresa_id:EMPRESA_DB_ID, empleado_id:s.empId, fecha_inicio:s.inicio,
   fecha_fin:s.fin, dias:+s.dias||0, estado:s.estado, motivo:s.motivo||null });
@@ -773,7 +803,7 @@ async function cargar(){
       if(!huboError && rEmpresa.data){
         empresa = { nombre:rEmpresa.data.nombre, ruc:rEmpresa.data.ruc, dv:rEmpresa.data.dv,
           actividad:rEmpresa.data.actividad, direccion:rEmpresa.data.direccion, correo:rEmpresa.data.correo,
-          riesgoCIIU:+rEmpresa.data.riesgo_ciiu };
+          riesgoCIIU:+rEmpresa.data.riesgo_ciiu, aprobado:!!rEmpresa.data.aprobado };
         periodoActual = rEmpresa.data.periodo_actual||periodoActual;
         empleados = (rEmpleados.data||[]).map(mapEmpleadoDeDB);
         usuarios = (rUsuarios.data||[]).map(mapUsuarioDeDB);
@@ -830,11 +860,11 @@ async function verificarConexionNube(){
   }catch(e){ actualizarEstadoNube("error"); }
 }
 function reiniciarDatos(){
-  if(!confirm("Esto borrará todos los datos guardados (incluida la nube) y restaurará el ejemplo inicial. ¿Continuar?")) return;
+  if(!confirm("Esto borrará TODOS los datos de tu empresa en la nube, incluido tu propio perfil de acceso, y no se puede deshacer. Tendrás que registrarte de nuevo. ¿Continuar?")) return;
   if(dbDisponible) localStorage.removeItem(DB_KEY);
-  if(supa){
+  if(supa && EMPRESA_DB_ID){
     const tablas=["solicitudes_vacaciones","amonestaciones","bajas","liquidaciones","historial_periodos","empleados","usuarios","empresas"];
-    Promise.all(tablas.map(t=>supa.from(t).delete().eq(t==="empresas"?"id":"empresa_id", t==="empresas"?EMPRESA_DB_ID:EMPRESA_DB_ID)))
+    Promise.all(tablas.map(t=>supa.from(t).delete().eq(t==="empresas"?"id":"empresa_id", EMPRESA_DB_ID)))
       .then(()=>location.reload()).catch(()=>location.reload());
   } else location.reload();
 }
@@ -901,68 +931,104 @@ async function iniciarSesion(ev){
   return false;
 }
 
+let pendienteNombreEmpresa = null; // se usa solo entre el envío del formulario de registro y la primera carga de sesión
+
 async function registrarse(ev){
   ev.preventDefault();
   const errBox=document.getElementById("regError"); errBox.textContent=""; errBox.style.color="";
   if(!supa){ errBox.textContent="No hay conexión con el servidor. Verifica tu internet."; return false; }
+  const nombreEmpresa=document.getElementById("regEmpresa").value.trim();
   const nombre=document.getElementById("regNombre").value.trim();
   const correo=document.getElementById("regCorreo").value.trim();
   const clave=document.getElementById("regClave").value;
+  if(!nombreEmpresa){ errBox.textContent="Escribe el nombre de tu empresa."; return false; }
   const btn=document.getElementById("btnRegistro"); btn.disabled=true; btn.textContent="Creando cuenta…";
   try{
     const {data,error} = await supa.auth.signUp({email:correo, password:clave, options:{data:{nombre}}});
-    if(error){ errBox.textContent=traducirErrorAuth(error.message); btn.disabled=false; btn.textContent="Crear cuenta"; return false; }
+    if(error){ errBox.textContent=traducirErrorAuth(error.message); btn.disabled=false; btn.textContent="Crear cuenta y empresa"; return false; }
+    pendienteNombreEmpresa = nombreEmpresa;
     if(!data.session){
       // El proyecto exige confirmar el correo antes de dar acceso: aún no hay sesión real,
       // así que no se toca la base de datos todavía (la seguridad RLS lo rechazaría de todos modos).
       errBox.style.color="var(--green)";
-      errBox.textContent="Cuenta creada. Revisa tu correo, confirma tu cuenta y luego vuelve aquí para iniciar sesión.";
-      btn.disabled=false; btn.textContent="Crear cuenta";
+      errBox.textContent="Cuenta creada. Revisa tu correo, confirma tu cuenta y luego vuelve aquí para iniciar sesión; ahí terminaremos de crear tu empresa.";
+      btn.disabled=false; btn.textContent="Crear cuenta y empresa";
       return false;
     }
     // La confirmación de correo está desactivada en el proyecto: ya hay sesión real de inmediato.
     await onSesionIniciada(data.user);
   }catch(e){ errBox.textContent="No se pudo crear la cuenta. Intenta de nuevo."; }
-  btn.disabled=false; btn.textContent="Crear cuenta";
+  btn.disabled=false; btn.textContent="Crear cuenta y empresa";
   return false;
 }
 
 async function onSesionIniciada(user){
   sesionActual = {id:user.id, email:user.email};
   document.getElementById("authScreen").style.display="none";
-  document.getElementById("appRoot").style.display="";
-  await cargar();
-  let yo = usuarios.find(u=>u.correo && u.correo.toLowerCase()===user.email.toLowerCase());
-  if(!yo && usuarios.length===0){
-    // Nadie ha usado el sistema todavía: esta persona, ya con sesión real y confirmada,
-    // queda como la primera Administradora. Aquí sí se puede escribir porque la sesión es válida.
-    const nombre = (user.user_metadata&&user.user_metadata.nombre) || user.email.split("@")[0];
-    const nuevoId = Date.now()%2147483647;
-    const {error} = await supa.from("usuarios").insert({ id:nuevoId, empresa_id:EMPRESA_DB_ID, nombre,
-      correo:user.email, contrasena_hash:"gestionada-por-supabase-auth", rol:"admin", activo:true });
-    if(!error){ usuarios.push({id:nuevoId, nombre, correo:user.email, rol:"admin"}); yo=usuarios[usuarios.length-1]; }
+  document.getElementById("pendienteScreen").style.display="none";
+
+  // Paso 1: ¿esta cuenta de acceso ya tiene un perfil (usuario) vinculado, en cualquier empresa?
+  let miPerfil=null;
+  try{
+    const {data} = await supa.from("usuarios").select("*").eq("auth_id",user.id).maybeSingle();
+    miPerfil=data;
+  }catch(e){}
+
+  if(!miPerfil && pendienteNombreEmpresa){
+    // Es un registro nuevo: se crea su propia empresa, separada de cualquier otra, pendiente de aprobación.
+    try{
+      const {data:nuevaEmpresa,error:errEmp} = await supa.from("empresas").insert({
+        nombre:pendienteNombreEmpresa, ruc:"", dv:"", actividad:"", direccion:"", correo:user.email,
+        riesgo_ciiu:1.05, periodo_actual:"Julio 2026", aprobado:false
+      }).select().single();
+      if(!errEmp && nuevaEmpresa){
+        const nombre=(user.user_metadata&&user.user_metadata.nombre)||user.email.split("@")[0];
+        const nuevoId=Date.now()%2147483647;
+        const {error:errUsr} = await supa.from("usuarios").insert({ id:nuevoId, empresa_id:nuevaEmpresa.id, auth_id:user.id,
+          nombre, correo:user.email, contrasena_hash:"gestionada-por-supabase-auth", rol:"admin", activo:true });
+        if(!errUsr) miPerfil={id:nuevoId, empresa_id:nuevaEmpresa.id, nombre, correo:user.email, rol:"admin"};
+      }
+    }catch(e){}
+    pendienteNombreEmpresa=null;
   }
-  if(!yo){
-    // Tiene cuenta de acceso confirmada, pero ningún administrador le asignó un perfil todavía.
+
+  if(!miPerfil){
+    // Cuenta confirmada pero sin perfil ni empresa: solo el superadministrador entra sin uno.
+    if(esSuperadmin()){ await mostrarPanelSuperadmin(); return; }
     await cerrarSesion();
     const errBox=document.getElementById("loginError");
     if(errBox) errBox.textContent="Tu cuenta no tiene un perfil asignado en el sistema. Pide a un administrador que te agregue en Usuarios y roles.";
     return;
   }
-  usuarioActivoId = yo.id;
+
+  EMPRESA_DB_ID = miPerfil.empresa_id;
+  await cargar();
+  usuarioActivoId = miPerfil.id;
+  if(usuarios.length===0 || !usuarios.some(u=>u.id===miPerfil.id)){
+    usuarios=[{id:miPerfil.id, nombre:miPerfil.nombre, correo:miPerfil.correo, rol:miPerfil.rol, authId:miPerfil.auth_id}];
+  }
+
+  if(!empresa.aprobado && !esSuperadmin()){
+    document.getElementById("pendienteScreen").style.display="flex";
+    document.getElementById("pendienteTitulo").textContent=`${empresa.nombre||"Tu empresa"} está pendiente de aprobación`;
+    return;
+  }
+
   cargarTema();
   actualizarPeriodoUI();
   actualizarUsuarioUI();
   construirMenu();
+  document.getElementById("appRoot").style.display="";
   document.getElementById("chipCo").textContent=empresa.nombre;
   document.getElementById("content").innerHTML=V.dashboard();
-  anunciar(`Sesión iniciada como ${yo.nombre}, ${ROLES[yo.rol].nombre}`);
+  anunciar(`Sesión iniciada como ${miPerfil.nombre}, ${ROLES[miPerfil.rol].nombre}`);
 }
 
 async function cerrarSesion(){
   if(supa){ try{ await supa.auth.signOut(); }catch(e){} }
-  sesionActual = null;
+  sesionActual = null; EMPRESA_DB_ID = null;
   document.getElementById("appRoot").style.display="none";
+  document.getElementById("pendienteScreen").style.display="none";
   document.getElementById("authScreen").style.display="flex";
   document.getElementById("loginCorreo").value="";
   document.getElementById("loginClave").value="";
@@ -2150,7 +2216,7 @@ async function guardarUsuario(id){
     const clienteTemporal = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const {data,error} = await clienteTemporal.auth.signUp({email:correo, password:clave});
     if(error){ errBox.textContent="No se pudo crear el acceso: "+traducirErrorAuth(error.message); btn.disabled=false; btn.textContent="Crear usuario"; return; }
-    usuarios.push({id:nextUsuarioId++, nombre, rol, correo});
+    usuarios.push({id:nextUsuarioId++, nombre, rol, correo, authId:data.user?data.user.id:null});
     guardar(); cerrarModal(); anunciar("Usuario creado con su cuenta de acceso"); switchView("usuarios");
   }catch(e){ errBox.textContent="No se pudo crear el usuario. Intenta de nuevo."; btn.disabled=false; btn.textContent="Crear usuario"; }
 }
@@ -2166,6 +2232,54 @@ function exportarUsuariosCSV(){
   const filas=[["Nombre","Correo","Rol","Alcance"]];
   usuarios.forEach(u=>filas.push([u.nombre,u.correo||"—",ROLES[u.rol].nombre,ROLES[u.rol].desc]));
   descargarCSV("Usuarios.csv",filas);
+}
+
+/* ===== PANEL DEL SUPERADMINISTRADOR: EMPRESAS Y APROBACIONES ===== */
+// Se usa cuando la cuenta autenticada es superadmin pero no tiene un perfil de empresa propio.
+async function mostrarPanelSuperadmin(){
+  usuarios=[{id:0, nombre:"Superadministrador", correo:sesionActual.email, rol:"admin"}];
+  usuarioActivoId=0;
+  empresa={nombre:"Panel del superadministrador"};
+  cargarTema();
+  actualizarUsuarioUI();
+  document.getElementById("appRoot").style.display="";
+  document.getElementById("chipCo").textContent="Panel del superadministrador";
+  document.querySelectorAll(".nav-item").forEach(b=>{ b.style.display = b.dataset.view==="aprobaciones" ? "" : "none"; });
+  switchView("aprobaciones");
+}
+V.aprobaciones = ()=>{
+  return `<div class="alert"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+    <div>Cada empresa que se registra queda separada de las demás y pendiente de aprobación hasta que la revises aquí. Sus datos nunca se comparten con otras empresas.</div></div>
+  <div id="aprobacionesLista"><div class="card"><div class="card-b" style="text-align:center;padding:30px;color:var(--gray)">Cargando empresas…</div></div></div>`;
+};
+async function renderAprobaciones(){
+  const host=document.getElementById("aprobacionesLista"); if(!host||!supa) return;
+  const {data,error} = await supa.from("empresas").select("*").order("id",{ascending:false});
+  if(error||!data){ host.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:30px;color:var(--red)">No se pudo cargar la lista de empresas.</div></div>`; return; }
+  if(!data.length){ host.innerHTML=`<div class="card"><div class="card-b" style="text-align:center;padding:30px;color:var(--gray)">Aún no hay empresas registradas.</div></div>`; return; }
+  const filas=data.map(e=>`<tr>
+    <td><b>${e.nombre}</b><div class="mini">${e.correo||"—"}</div></td>
+    <td class="mini">${fmtFecha((e.solicitado_en||"").slice(0,10))}</td>
+    <td><span class="tag ${e.aprobado?'ok':'warn'}">${e.aprobado?'Aprobada':'Pendiente'}</span></td>
+    <td style="text-align:right">${e.aprobado
+      ?`<button class="btn btn-ghost btn-sm" onclick="cambiarAprobacion(${e.id},false)">Suspender</button>`
+      :`<button class="btn btn-primary btn-sm" onclick="cambiarAprobacion(${e.id},true)">Aprobar</button>`}</td>
+    </tr>`).join("");
+  host.innerHTML=`<div class="kpi-grid">
+    <div class="kpi"><div class="label">Empresas registradas</div><div class="value">${data.length}</div><div class="meta">En todo el sistema</div></div>
+    <div class="kpi gold"><div class="label">Pendientes de aprobación</div><div class="value">${data.filter(e=>!e.aprobado).length}</div><div class="meta">Esperando revisión</div></div>
+    <div class="kpi g"><div class="label">Aprobadas</div><div class="value">${data.filter(e=>e.aprobado).length}</div><div class="meta">Con acceso activo</div></div>
+  </div>
+  <div class="card"><div class="card-h"><h3>Todas las empresas</h3></div>
+    <div class="card-b" style="padding:0"><div class="table-scroll"><table><thead><tr>
+      <th scope="col">Empresa</th><th scope="col">Solicitada</th><th scope="col">Estado</th><th scope="col" style="text-align:right">Acción</th>
+    </tr></thead><tbody>${filas}</tbody></table></div></div></div>`;
+}
+async function cambiarAprobacion(id,aprobar){
+  if(!confirm(aprobar?"¿Aprobar esta empresa y darle acceso al sistema?":"¿Suspender el acceso de esta empresa?")) return;
+  await supa.from("empresas").update({aprobado:aprobar}).eq("id",id);
+  anunciar(aprobar?"Empresa aprobada":"Empresa suspendida");
+  renderAprobaciones();
 }
 
 /* ===== EXPORTADORES CSV ===== */
@@ -2206,12 +2320,14 @@ const titles={
   reportes:["Reportes","Aportes, costos y resumen para la CSS"],
   historial:["Historial de períodos","Planillas archivadas y comparación entre meses"],
   empresa:["Datos de la empresa","Configuración del negocio"],
-  usuarios:["Usuarios y roles","Gestión de accesos al sistema"]
+  usuarios:["Usuarios y roles","Gestión de accesos al sistema"],
+  aprobaciones:["Empresas y aprobaciones","Panel del superadministrador"]
 };
 function construirMenu(){
   const permitidas=PERMISOS[rolActivo()]||[];
   document.querySelectorAll(".nav-item").forEach(b=>{
-    b.style.display = permitidas.includes(b.dataset.view) ? "" : "none";
+    const v=b.dataset.view;
+    b.style.display = (v==="aprobaciones" ? esSuperadmin() : permitidas.includes(v)) ? "" : "none";
   });
   // ocultar la etiqueta de un grupo si no tiene ítems visibles
   document.querySelectorAll("[data-grupo-label]").forEach(lbl=>{
@@ -2239,6 +2355,7 @@ function switchView(v){
   if(v==="colilla") renderSlip();
   if(v==="liquidacion") renderLiq();
   if(v==="empresa"){ actualizarEstadoNube(ultimoEstadoNube); verificarConexionNube(); }
+  if(v==="aprobaciones") renderAprobaciones();
   if(v==="alta"&&wizardStep===2) livePreview();
 }
 function toggleMenu(){
