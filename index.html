@@ -457,7 +457,7 @@
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 <a href="#content" class="skip-link">Saltar al contenido principal</a>
@@ -598,6 +598,7 @@ try{ supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }catch(e){
 const DB_KEY = "planilladigital_v2";
 let dbDisponible = (()=>{ try{ const k="__t"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }catch(e){ return false; } })();
 let nubeDisponible = !!supa;  // se confirma en el primer intento real de guardar/cargar
+let ultimoEstadoNube = "verificando";
 let guardando = false;
 
 function empaquetarEstado(){
@@ -659,11 +660,22 @@ async function cargar(){
   }catch(e){ return false; }
 }
 function actualizarEstadoNube(estado){
+  ultimoEstadoNube=estado;
   const el=document.getElementById("nubeEstado"); if(!el) return;
   const map={ok:["Sincronizado con la nube","ok"], guardando:["Guardando…","pend"],
-    error:["Sin conexión a la nube · usando este dispositivo","warn"], vacio:["Conectado · sin datos previos en la nube","ok"]};
+    error:["Sin conexión a la nube · usando este dispositivo","warn"], vacio:["Conectado · sin datos previos en la nube","ok"],
+    verificando:["Verificando conexión…","pend"]};
   const [txt,cls]=map[estado]||["",""];
   el.textContent=txt; el.className="tag "+cls;
+}
+// Comprobación ligera de conexión, sin sobrescribir datos, para refrescar el indicador visual.
+async function verificarConexionNube(){
+  if(!supa){ actualizarEstadoNube("error"); return; }
+  actualizarEstadoNube("guardando");
+  try{
+    const {error} = await supa.from("app_state").select("id").eq("id",EMPRESA_ID).maybeSingle();
+    actualizarEstadoNube(error?"error":"ok");
+  }catch(e){ actualizarEstadoNube("error"); }
 }
 function reiniciarDatos(){
   if(!confirm("Esto borrará todos los datos guardados (incluida la nube) y restaurará el ejemplo inicial. ¿Continuar?")) return;
@@ -1940,6 +1952,7 @@ function switchView(v){
   anunciar(titles[v][0]+". "+titles[v][1]);
   if(v==="colilla") renderSlip();
   if(v==="liquidacion") renderLiq();
+  if(v==="empresa"){ actualizarEstadoNube(ultimoEstadoNube); verificarConexionNube(); }
   if(v==="alta"&&wizardStep===2) livePreview();
 }
 function toggleMenu(){
